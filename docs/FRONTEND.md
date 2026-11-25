@@ -4,9 +4,7 @@
 
 `config.js` está configurado com `USE_API: true` e `API_BASE_URL: 'https://intermed.api.drip.infinityfree.me/api/v1'`.
 
-O catálogo público usa `GET /properties` e percorre as páginas devolvidas pela API. A área administrativa usa agora a API para indicadores, aprovação de contas e imóveis, pagamentos e leitura/actualização das configurações. O registo, autenticação, favoritos, pagamentos de visitas/arrendamentos/comissões, check-in e operações da comunidade também têm chamadas à API. O token Bearer fica em `localStorage['inter_token']`.
-
-Ainda há painéis profissionais que usam cache `localStorage` como fonte de apresentação, incluindo imóveis próprios/vinculados, visitas e disponibilidade. A comunidade também precisa carregar inicialmente a lista da API ao abrir o painel. A flag `USE_API: true` não converte automaticamente esses painéis; consultar os pontos em falta antes de considerar a migração completa.
+O catálogo público usa `GET /properties` e percorre as páginas devolvidas pela API. A área administrativa usa a API para indicadores, aprovação de contas e imóveis, pagamentos e configurações. O painel do intermediário carrega imóveis, convites/vínculos, visitas e disponibilidade da API; o painel do proprietário ainda tem secções que dependem do cache local. O registo, autenticação, pagamentos e operações da comunidade também têm chamadas à API, embora o carregamento inicial da comunidade ainda precise ser verificado. O token Bearer fica em `localStorage['inter_token']`.
 
 ## Contrato de endpoints
 
@@ -15,10 +13,10 @@ Esta tabela descreve o contrato previsto para completar a integração; a presen
 | Site (localStorage) | API |
 |---|---|
 | `inter_users`, `inter_current` | `POST /auth/phone-verifications`, `POST /auth/phone-verifications/verify`, `POST /auth/register`, `POST /auth/login`, `GET /auth/me` |
-| `inter_custom_properties` | `GET /properties`, `POST /properties` (multipart), `GET /properties/mine`, admin: `GET /admin/properties?status=pending_review`, `PATCH /admin/properties/{id}` |
-| `inter_property_agents` | `POST /properties/{id}/agents`, `GET /agent-links`, `PATCH /agent-links/{id}` |
-| `inter_availability` | `GET/PUT /availability` (dias 1=segunda … 7=domingo) |
-| `inter_visits` | `GET/POST /visits`, `POST /visits/checkin` |
+| `inter_custom_properties` | `GET /properties`, `POST /properties` (multipart), `GET /properties/mine` (intermediário), admin: `GET /admin/properties?status=pending_review`, `PATCH /admin/properties/{id}` |
+| `inter_property_agents` | `POST /properties/{id}/agents` (publicador), `GET /agent-links`, `PATCH /agent-links/{id}` (intermediário aceita com `approved` ou recusa com `rejected`; proprietário pode revogar com `revoked`) |
+| `inter_availability` | `GET/PUT /availability` (intermediário; dias 1=segunda … 7=domingo; domingo `0` do formulário é enviado como `7`) |
+| `inter_visits` | `GET/POST /visits`, `POST /visits/checkin` (visitas atribuídas são carregadas da API; o código só aparece após pagamento confirmado) |
 | `inter_rent_*`, `inter_agent_commissions` | `GET/POST /rentals`, `GET /commissions`, `PATCH /commissions/{id}/pay` |
 | `inter_community_*` | `GET/POST /community/requests`, `POST /community/requests/{id}/offers`, `PATCH …/close` |
 | notificações (toast/contador) | `GET /notifications`, `POST /notifications/read-all` |
@@ -37,5 +35,7 @@ Os três endpoints devem devolver o recurso em `data`, com `payment.reference`, 
 
 Enquanto o pagamento estiver pendente, o frontend consulta `GET /visits`, `GET /rentals` ou `GET /commissions` a cada 25 segundos e permite atualização manual. Ao falhar um POST, consulta primeiro a lista correspondente antes de permitir nova tentativa, pois o recurso pode ter sido criado apesar da falha de resposta. As listas usam o envelope Laravel paginado em `data`. O frontend não consulta endpoints GPO diretamente; a confirmação e atualização das rotas são responsabilidade do backend.
 **Tempo real:** as notificações são por consulta (`GET /notifications`, ex. a cada 30–60 s). Para tempo real acrescente Laravel Reverb/Pusher.
+
+**Painel do intermediário:** ao abrir a área profissional, o frontend percorre as páginas de `GET /properties/mine`, `GET /agent-links` e `GET /visits`, e lê `GET /availability`. Só os vínculos cujo `agent_id` corresponde ao utilizador autenticado são apresentados como convites recebidos. Aceitar e recusar enviam `PATCH /agent-links/{id}` com `{ "status": "approved" }` ou `{ "status": "rejected" }`; depois, os dados são novamente lidos da API. A disponibilidade é gravada com `PUT /availability` e o check-in é validado com `POST /visits/checkin`. Erros de carregamento são apresentados sem recorrer aos dados de demonstração.
 
 **PWA/cache:** ao alterar ficheiros JavaScript ou configuração incluídos no service worker, aumenta a versão de cache em `sw.js`. Se o navegador continuar a carregar uma versão antiga, faça uma recarga forçada ou limpe os dados do site.

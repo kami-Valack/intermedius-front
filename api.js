@@ -1,6 +1,5 @@
 // Camada única de acesso ao backend Laravel (ver docs/FRONTEND.md).
-// Hoje o site grava tudo em localStorage (demonstração). Para operar: config.js -> USE_API:true
-// e substitua, em roles.js / rentals.js / app.js / community.js, load()/save()/localStorage por Api.*.
+// Os tokens e alguns caches de apresentação ficam em localStorage; USE_API controla as chamadas reais.
 (function () {
   const C = window.APP_CONFIG || {};
   const getToken = () => localStorage.getItem('inter_token') || '';
@@ -48,17 +47,17 @@
       logout: () => post('/auth/logout').finally(() => setToken(null))
     },
     properties: {
-      list: q => get('/properties' + qs(q)), get: id => get('/properties/' + id), mine: () => get('/properties/mine'),
+      list: q => get('/properties' + qs(q)), get: id => get('/properties/' + id), mine: q => get('/properties/mine' + qs(q)),
       create: formData => post('/properties', formData),        // 409 duplicado · 422 menos de 5 fotos
       remove: id => del('/properties/' + id), favorite: id => post('/properties/' + id + '/favorite'), favorites: () => get('/favorites')
     },
     agentLinks: {
-      list: () => get('/agent-links'),
+      list: q => get('/agent-links' + qs(q)),
       invite: (propertyId, b) => post('/properties/' + propertyId + '/agents', b),   // 422 agent_limit (máx. 5)
       respond: (id, status) => patch('/agent-links/' + id, { status })               // approved | rejected | revoked
     },
     availability: { get: () => get('/availability'), save: b => put('/availability', b) },   // days: 1=segunda … 7=domingo
-    visits: { list: () => get('/visits'), create: b => post('/visits', b), checkin: code => post('/visits/checkin', { code }) },
+    visits: { list: q => get('/visits' + qs(q)), create: b => post('/visits', b), checkin: code => post('/visits/checkin', { code }) },
     rentals: { list: () => get('/rentals'), create: b => post('/rentals', b) },
     commissions: { list: () => get('/commissions'), pay: (id, body) => patch('/commissions/' + id + '/pay', body) },
     community: {
