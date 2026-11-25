@@ -97,7 +97,8 @@ function adminPropertyList(properties){
  if(!properties.length)return '<div class="role-empty"><b>Sem imóveis pendentes</b>Novos imóveis enviados para revisão vão aparecer aqui.</div>';
  return '<div class="role-list">'+properties.map(property=>{
   const owner=property.owner?.name||property.owner_name||property.ownerName||'Publicador';
-  return '<article class="role-row"><img class="role-thumb" src="'+esc(property.image||'assets/imovel-1.png')+'" alt=""><div><strong>'+esc(property.title)+'</strong><small>'+esc(owner)+' · '+esc(property.province||'')+' / '+esc(property.municipality||'')+' · '+money(property.price)+' Kz</small></div><div class="role-row-actions"><span class="status-pill '+statusKind(property.status)+'">'+statusText(property.status)+'</span>'+(property.status==='pending_review'?'<button class="tiny-button" data-action="approve-property" data-id="'+esc(property.id)+'">Aprovar</button><button class="tiny-button danger" data-action="reject-property" data-id="'+esc(property.id)+'">Rejeitar</button>':'')+'</div></article>';
+  const image=window.apiMediaUrl?.(property.image||property.image_url)||property.image||'assets/imovel-1.png';
+  return '<article class="role-row"><img class="role-thumb" src="'+esc(image)+'" alt=""><div><strong>'+esc(property.title)+'</strong><small>'+esc(owner)+' · '+esc(property.province||'')+' / '+esc(property.municipality||'')+' · '+money(property.price)+' Kz</small></div><div class="role-row-actions"><span class="status-pill '+statusKind(property.status)+'">'+statusText(property.status)+'</span>'+(property.status==='pending_review'?'<button class="tiny-button" data-action="approve-property" data-id="'+esc(property.id)+'">Aprovar</button><button class="tiny-button danger" data-action="reject-property" data-id="'+esc(property.id)+'">Rejeitar</button>':'')+'</div></article>';
  }).join('')+'</div>';
 }
 function adminPaymentList(payments){
@@ -160,11 +161,14 @@ if(window.Api?.enabled()){
  function mapAgentProperty(property){
   const media=property.media||property.photos||[];
   const firstMedia=media[0];
+  const photos=media.map(item=>window.apiMediaUrl?.(typeof item==='string'?item:(item.url||item.path))||(typeof item==='string'?item:(item.url||item.path||''))).filter(Boolean);
+  const rawImage=typeof property.image==='string'?property.image:property.image?.url||property.image?.path||property.image_url||(typeof firstMedia==='string'?firstMedia:firstMedia?.url||firstMedia?.original_url||firstMedia?.path);
+  const image=window.apiMediaUrl?.(rawImage)||rawImage||'assets/imovel-1.png';
   return {
    id:property.id,title:property.title||'Imóvel',category:property.category,type:property.type,price:Number(property.price||0),
    province:property.province,municipality:property.municipality||'',neighborhood:property.neighborhood||'',
    bedrooms:Number(property.bedrooms||0),baths:Number(property.baths||0),area:Number(property.area||0),
-   image:property.image||property.image_url||firstMedia?.url||firstMedia?.original_url||'assets/imovel-1.png',
+   image,photos,
    status:property.status||'pending_review',ownerEmail:property.owner?.email||property.owner_email||'',
    ownerName:property.owner?.name||property.owner_name||'',description:property.description||'',amenities:property.amenities||[]
   };
