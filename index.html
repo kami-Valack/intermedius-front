@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="pt-AO">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f8f8f5" />
+  <meta name="description" content="Encontre o imóvel certo. Negocie com segurança." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Intermediárius</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#explorar" aria-label="Intermediárius, início">
+      <span class="brand-mark"><span></span><span></span><span></span></span>
+      <span>intermediárius</span>
+    </a>
+    <nav class="topnav" aria-label="Navegação principal">
+      <button class="nav-link active" data-view="explorar">Explorar</button>
+      <button class="nav-link" data-view="favoritos">Favoritos <span class="nav-count" id="favCount"></span></button>
+      <button class="nav-link" data-view="visitas">Visitas</button>
+      <button class="nav-link workspace-link" id="workspaceButton">Área profissional</button>
+    </nav>
+    <button class="profile-button" id="profileButton"><span class="avatar">A</span><span class="profile-name">Entrar / Criar conta</span><span class="chevron">⌄</span></button>
+  </header>
+
+  <main id="app">
+    <section class="page-shell">
+      <div class="intro-row">
+        <div><p class="eyebrow"><span class="live-dot"></span> ANGOLA · IMÓVEIS VERIFICADOS</p><h1>Um lugar para<br class="mobile-break"> chamar de seu.</h1><p class="intro-copy">Encontre o imóvel certo. Negocie com segurança.</p></div>
+        <button class="map-toggle" id="mapToggle" aria-label="Mostrar mapa"><span class="mini-map-icon">⌖</span> <span>Ver mapa</span></button>
+      </div>
+      <form class="search-bar" id="searchForm">
+        <label class="search-field where-field"><span class="field-icon">⌕</span><span class="field-stack"><small>Onde?</small><input id="searchInput" type="search" placeholder="Província, município ou bairro" autocomplete="off"></span></label>
+        <label class="search-field category-field"><span class="field-stack"><small>O que procura?</small><select id="categorySelect"><option value="all">Todos os imóveis</option><option value="rent">Arrendamento</option><option value="sale">Compra e venda</option><option value="commercial">Comercial</option></select></span></label>
+        <button class="filter-button" type="button" id="filterButton"><span class="filter-glyph">☷</span><span>Filtros</span><i id="filterDot"></i></button>
+        <button class="search-submit" type="submit" aria-label="Pesquisar">Pesquisar <span>→</span></button>
+      </form>
+
+      <div class="results-heading"><div><p class="eyebrow muted-eyebrow" id="resultEyebrow">À SUA MEDIDA</p><h2 id="resultsTitle">Imóveis em destaque <span class="result-count" id="resultCount"></span></h2></div><button class="sort-button" id="sortButton">Mais recentes <span>⌄</span></button></div>
+      <div class="results-layout" id="resultsLayout">
+        <section class="listing-area" aria-label="Lista de imóveis"><div class="property-grid" id="propertyGrid"></div><div class="empty-state hidden" id="emptyState"><span class="empty-icon">⌕</span><h3>Nenhum imóvel por aqui</h3><p>Tente ajustar a pesquisa ou os filtros.</p><button class="text-button" id="clearFilters">Limpar filtros</button></div></section>
+        <aside class="map-panel" id="mapPanel" aria-label="Mapa aproximado de imóveis"><div class="map-topline"><div><strong>Luanda</strong><small>Localização aproximada</small></div><span class="map-zoom">+ &nbsp; −</span></div><div class="map-canvas" id="mapCanvas"><div class="map-label label-1">BENFICA</div><div class="map-label label-2">CAMAMA</div><div class="map-label label-3">TALATONA</div><div class="map-label label-4">MORRO BENTO</div><div class="map-label label-5">MAIANGA</div><div class="map-river"></div><div class="map-road road-a"></div><div class="map-road road-b"></div><div class="map-road road-c"></div><div class="map-road road-d"></div><div class="map-road road-e"></div><div class="map-markers" id="mapMarkers"></div><div class="map-privacy"><span>◌</span> Zonas aproximadas até agendar</div></div><div class="map-legend"><span><i class="legend-dot"></i> Imóveis disponíveis</span><span>⌖ Luanda, Angola</span></div></aside>
+      </div>
+    </section>
+    <div id="roleMount" hidden></div>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Navegação móvel"><button class="bottom-item active" data-view="explorar"><span class="bottom-icon">⌕</span><span>Explorar</span></button><button class="bottom-item" data-view="favoritos"><span class="bottom-icon">♡</span><span>Favoritos</span></button><button class="bottom-item" data-view="visitas"><span class="bottom-icon">▣</span><span>Visitas</span></button><button class="bottom-item" data-view="perfil"><span class="bottom-icon">◉</span><span>Perfil</span></button></nav>
+
+  <div class="overlay" id="overlay" aria-hidden="true"><div class="dialog" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><button class="close-button" id="closeDialog" aria-label="Fechar">×</button><div id="dialogContent"></div></div></div>
+  <div class="toast" id="toast" role="status"></div>
+  <input type="file" id="installInput" hidden />
+  <link rel="stylesheet" href="roles.css" />
+  <link rel="stylesheet" href="rentals.css" />
+  <link rel="stylesheet" href="community.css" />
+  <script src="config.js"></script>
+  <script src="api.js"></script>
+  <script type="module" src="app.js"></script>
+  <script type="module" src="roles.js"></script>
+  <script type="module" src="rentals.js"></script>
+  <script type="module" src="community.js"></script>
+</body>
+</html>
