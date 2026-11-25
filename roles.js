@@ -8,8 +8,50 @@ const fee=()=>Number(localStorage.getItem(KEY.fee)||3000);
 const money=n=>new Intl.NumberFormat('pt-AO',{maximumFractionDigits:0}).format(Number(n)||0);
 function toastMsg(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastMsg.timer);toastMsg.timer=setTimeout(()=>t.classList.remove('show'),2800)}
 function openAccess(mode='register'){drawAccess(mode);$('#overlay').classList.add('open');$('#overlay').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
-function drawAccess(mode){const register=mode==='register';$('#dialogContent').innerHTML='<div class="dialog-inner"><p class="eyebrow">INTERMEDIÁRIUS · CONTA SEGURA</p><div class="login-tabs"><button class="'+(!register?'active':'')+'" data-access="login">Entrar</button><button class="'+(register?'active':'')+'" data-access="register">Criar conta</button></div><h2 class="dialog-title" id="dialogTitle">'+(register?'Crie a sua conta':'Bem-vindo de volta')+'</h2><p class="dialog-subtitle">'+(register?'Um registo para cada perfil do ecossistema imobiliário.':'Aceda ao seu perfil e às suas ferramentas.')+'</p><form id="accessForm" class="role-form">'+(register?'<div class="role-field full"><label>Nome completo</label><input name="name" required autocomplete="name" placeholder="O seu nome"></div>':'')+'<div class="role-field full"><label>E-mail</label><input name="email" type="email" required autocomplete="email" placeholder="nome@email.com"></div>'+(register?'<div class="role-field"><label>Telefone (+244)</label><input name="phone" required placeholder="+244 9xx xxx xxx"></div><div class="role-field"><label>NIF <span class="optional-label">(opcional)</span></label><input name="nif" placeholder="Número de identificação fiscal"></div><div class="role-field full"><label>Perfil</label><select name="role" id="signupRole"><option value="client">Cliente — pesquisar e agendar visitas</option><option value="owner">Proprietário — publicar e gerir imóveis</option><option value="agent">Intermediário — gerir imóveis e visitas</option><option value="admin">Administrador — gestão da plataforma</option></select></div><div class="role-field full" id="docField"><label>BI / documento de identificação</label><input type="file" name="document" accept="image/*,.pdf"><p class="role-help">Necessário para validação manual de proprietários e intermediários.</p></div><div class="role-field full hidden" id="adminCodeField"><label>Código de demonstração de administrador</label><input name="adminCode" placeholder="Código de acesso"><p class="role-help">Na versão real, a conta de administrador é provisionada pela equipa da plataforma.</p></div>':'')+'<div class="role-field full"><label>Palavra-passe</label><input name="password" type="password" required minlength="6" autocomplete="'+(register?'new-password':'current-password')+'" placeholder="Mínimo 6 caracteres"></div><div class="role-form-actions"><button type="submit" class="primary-button">'+(register?'Criar conta':'Entrar')+' →</button></div></form><p class="role-note">Protótipo navegável: os registos e documentos ficam apenas neste navegador. O armazenamento seguro e a autenticação real requerem o backend e o storage privado definidos na especificação.</p></div>';
-$('#dialogContent').querySelectorAll('[data-access]').forEach(b=>b.onclick=()=>drawAccess(b.dataset.access));const roleSelect=$('#signupRole');if(roleSelect)roleSelect.onchange=()=>{$('#adminCodeField').classList.toggle('hidden',roleSelect.value!=='admin');$('#docField').classList.toggle('hidden',roleSelect.value==='client'||roleSelect.value==='admin')};const form=$('#accessForm');form.onsubmit=async e=>{e.preventDefault();const fd=new FormData(form),email=String(fd.get('email')).trim().toLowerCase(),password=String(fd.get('password'));if(register){let role=fd.get('role');if(role==='admin'&&fd.get('adminCode')!=='INT-ADMIN-MVP'){toastMsg('Código de demonstração inválido');return}let users=getUsers();if(users.some(u=>u.email===email)){toastMsg('Este e-mail já tem conta');return}let doc=form.querySelector('[name=document]').files[0];if((role==='owner'||role==='agent')&&!doc){toastMsg('Anexe o BI/NIF para validar este perfil');return}let user={id:'u-'+Date.now(),name:String(fd.get('name')).trim(),email,phone:String(fd.get('phone')||''),nif:String(fd.get('nif')||''),role,password,documentName:doc?doc.name:'',status:role==='client'?'active':'pending_review',createdAt:new Date().toISOString()};users.push(user);save(KEY.users,users);setCurrent(user);closeAccess();toastMsg(role==='client'?'Conta criada com sucesso':role==='admin'?'Administrador de demonstração criado':'Conta criada · validação de BI/NIF pendente');openWorkspace()}else{let user=getUsers().find(u=>u.email===email&&u.password===password);if(!user){toastMsg('E-mail ou palavra-passe incorrectos');return}setCurrent(user);closeAccess();openWorkspace()}}}
+function drawAccess(mode){
+ const register=mode==='register';
+ const registrationFields=register?`
+  <div class="role-field"><label>Telefone (+244)</label><input name="phone" required placeholder="+244 9xx xxx xxx"></div>
+  <div class="role-field"><label>NIF <span class="optional-label">(opcional)</span></label><input name="nif" placeholder="Número de identificação fiscal"></div>
+  <div class="role-field full"><label>Perfil</label><select name="role" id="signupRole"><option value="client">Cliente — pesquisar e agendar visitas</option><option value="owner">Proprietário — publicar e gerir imóveis</option><option value="agent">Intermediário — gerir imóveis e visitas</option></select></div>
+  <div class="role-field full" id="docField"><label>BI / documento de identificação</label><input type="file" name="document" accept="image/*,.pdf"><p class="role-help">Necessário para validação manual de proprietários e intermediários.</p></div>
+ `:'';
+ $('#dialogContent').innerHTML=`
+  <div class="dialog-inner">
+   <p class="eyebrow">INTERMEDIÁRIUS · CONTA SEGURA</p>
+   <div class="login-tabs"><button class="${!register?'active':''}" data-access="login">Entrar</button><button class="${register?'active':''}" data-access="register">Criar conta</button></div>
+   <h2 class="dialog-title" id="dialogTitle">${register?'Crie a sua conta':'Bem-vindo de volta'}</h2>
+   <p class="dialog-subtitle">${register?'Um registo para cada perfil do ecossistema imobiliário.':'Aceda ao seu perfil e às suas ferramentas.'}</p>
+   <form id="accessForm" class="role-form">
+    ${register?'<div class="role-field full"><label>Nome completo</label><input name="name" required autocomplete="name" placeholder="O seu nome"></div>':''}
+    <div class="role-field full"><label>E-mail</label><input name="email" type="email" required autocomplete="email" placeholder="nome@email.com"></div>
+    ${registrationFields}
+    <div class="role-field full"><label>Palavra-passe</label><input name="password" type="password" required minlength="6" autocomplete="${register?'new-password':'current-password'}" placeholder="Mínimo 6 caracteres"></div>
+    <div class="role-form-actions"><button type="submit" class="primary-button">${register?'Criar conta':'Entrar'} →</button></div>
+   </form>
+   <p class="role-note">Protótipo navegável: os registos e documentos ficam apenas neste navegador. O armazenamento seguro e a autenticação real requerem o backend e o storage privado definidos na especificação.</p>
+  </div>`;
+ $('#dialogContent').querySelectorAll('[data-access]').forEach(button=>button.onclick=()=>drawAccess(button.dataset.access));
+ const form=$('#accessForm');
+ form.onsubmit=async event=>{
+  event.preventDefault();
+  const fd=new FormData(form),email=String(fd.get('email')).trim().toLowerCase(),password=String(fd.get('password'));
+  if(register){
+   const role=String(fd.get('role')||'');
+   if(!['client','owner','agent'].includes(role)){toastMsg('Selecione um perfil disponível para criar a conta.');return}
+   const users=getUsers();
+   if(users.some(user=>user.email===email)){toastMsg('Este e-mail já tem conta');return}
+   const doc=form.querySelector('[name=document]').files[0];
+   if((role==='owner'||role==='agent')&&!doc){toastMsg('Anexe o BI/NIF para validar este perfil');return}
+   const user={id:'u-'+Date.now(),name:String(fd.get('name')).trim(),email,phone:String(fd.get('phone')||''),nif:String(fd.get('nif')||''),role,password,documentName:doc?doc.name:'',status:role==='client'?'active':'pending_review',createdAt:new Date().toISOString()};
+   users.push(user);save(KEY.users,users);setCurrent(user);closeAccess();toastMsg(role==='client'?'Conta criada com sucesso':'Conta criada · validação de BI/NIF pendente');openWorkspace();
+  }else{
+   const user=getUsers().find(item=>item.email===email&&item.password===password);
+   if(!user){toastMsg('E-mail ou palavra-passe incorrectos');return}
+   setCurrent(user);closeAccess();openWorkspace();
+  }
+ };
+}
 const legacyDrawAccess=drawAccess;
 drawAccess=function(mode){legacyDrawAccess(mode);if(mode==='register'&&window.Api?.enabled())setupPhoneVerification($('#accessForm'))};
 function normalizeAOPhoneForVerification(value){let digits=String(value||'').replace(/\D/g,'');if(digits.length===9&&digits[0]==='9')digits='244'+digits; if(!/^2449\d{8}$/.test(digits))return'';return '+244 '+digits.slice(3,6)+' '+digits.slice(6,9)+' '+digits.slice(9)}
@@ -44,7 +86,13 @@ function availabilityForm(){let a=load(KEY.availability,{} )[current.email]||{da
 function checkinForm(){return '<form class="role-panel role-form" id="checkinForm"><h3 class="role-field full">Validar código de visita</h3><div class="role-field full"><label>Código fornecido pelo cliente</label><input class="visit-code-input" name="visitCode" required placeholder="INT-8492" autocomplete="off"></div><p class="role-help role-field full">A validação só deve ser feita presencialmente. O cliente recebe o código após o pagamento confirmado.</p><div class="role-form-actions"><button class="primary-button">Confirmar check-in →</button></div></form>'}
 function clientPanel(){if(activePanel==='community')return window.communityPanel(current);if(activePanel==='visits'){let visits=getVisits();return head('As minhas visitas','Pagamentos, códigos de visita e localização desbloqueada.')+visitList(visits)}if(activePanel==='contracts')return head('Os meus contratos','Contratos emitidos após confirmação da primeira renda e comissão da plataforma.')+contractList();if(activePanel==='profile')return head('O meu perfil','Dados de registo e estado da verificação.')+'<div class="role-panel"><div class="role-list"><article class="role-row"><span class="host-avatar">'+esc(current.name[0].toUpperCase())+'</span><div><strong>'+esc(current.name)+'</strong><small>'+esc(current.email)+' · '+esc(current.phone||'')+'<br>'+esc(current.nif?'NIF '+current.nif:'Sem NIF registado')+' · BI/NIF '+(current.documentName?'anexado: '+esc(current.documentName):'não anexado')+'</small></div><span class="status-pill '+statusKind(current.status)+'">'+statusText(current.status)+'</span></article></div></div>';return head('Painel do cliente','Favoritos e visitas num só lugar.')+'<div class="role-stats">'+statsCard('Visitas marcadas',getVisits().length)+statsCard('Favoritos',load('inter_favs').length)+statsCard('Perfil','Cliente')+'</div><div class="role-hero"><div><strong>Pronto para encontrar o próximo imóvel?</strong><span>Explore anúncios e agende uma visita com segurança.</span></div><span class="role-hero-mark">⌂</span></div><div class="role-panel"><h3>Acesso rápido</h3><div class="role-row-actions" style="justify-content:flex-start"><button class="primary-button" id="goExplore">Explorar imóveis →</button><button class="secondary-button" data-panel="visits">Ver as minhas visitas</button></div></div>'}
 function adminPanel(){let users=getUsers(),props=getProps(),visits=getVisits();if(activePanel==='accounts')return head('Validar contas','Verifique BI/NIF e aprove ou rejeite contas de proprietário e intermediário.')+accountList(users.filter(u=>u.role!=='client'));if(activePanel==='properties')return head('Moderar imóveis','Revise anúncios antes de os disponibilizar ao público.')+adminPropertyList(props);if(activePanel==='payments')return head('Pagamentos GPO','Registo local de taxas de visita e métodos seleccionados.')+paymentReport(visits);if(activePanel==='settings')return head('Configurações da plataforma','Taxa de visita e comissões percentuais do fluxo de arrendamento.')+'<form class="role-panel role-form" id="feeForm"><h3 class="role-field full">Valores e percentagens</h3><div class="role-field"><label>Taxa da visita (Kz)</label><input name="fee" type="number" min="0" value="'+fee()+'" required></div><div class="role-field"><label>Comissão da plataforma sobre a renda (%)</label><input name="platformPct" type="number" min="0" max="100" step="0.1" value="'+(localStorage.getItem('inter_platform_commission_pct')||5)+'" required></div><div class="role-field"><label>Comissão padrão do intermediário, paga pelo proprietário (%)</label><input name="agentPct" type="number" min="0" max="100" step="0.1" value="'+(localStorage.getItem('inter_agent_commission_pct')||5)+'" required></div><div class="role-notice role-field full">Estas percentagens são parâmetros de demonstração. A comissão do intermediário não é adicionada à cobrança do arrendatário.</div><div class="role-form-actions"><button class="primary-button">Guardar configurações</button></div></form>';return head('Painel administrativo','Validação, moderação e auditoria do MVP.')+'<div class="role-stats">'+statsCard('Contas por validar',users.filter(u=>u.status==='pending_review').length)+statsCard('Imóveis em revisão',props.filter(p=>p.status==='pending_review').length)+statsCard('Visitas pagas',visits.filter(v=>v.paid).length)+'</div><div class="role-hero"><div><strong>Fila de moderação</strong><span>Valide identidades e qualidade dos anúncios.</span></div><span class="role-hero-mark">✓</span></div><div class="role-row-actions" style="justify-content:flex-start"><button class="primary-button" data-panel="accounts">Validar contas</button><button class="secondary-button" data-panel="properties">Rever imóveis</button><button class="secondary-button" data-panel="payments">Auditar pagamentos</button></div>'}
-function accountList(users){if(!users.length)return '<div class="role-empty"><b>Nenhuma conta profissional pendente</b>Novos proprietários e intermediários vão aparecer aqui.</div>';return '<div class="role-list">'+users.map(u=>'<article class="role-row"><span class="host-avatar">'+esc((u.name||'U')[0].toUpperCase())+'</span><div><strong>'+esc(u.name)+' · '+roleNames[u.role]+'</strong><small>'+esc(u.email)+' · '+esc(u.phone||'')+' · BI/NIF: '+esc(u.documentName||'não anexado')+'</small></div><div class="role-row-actions"><span class="status-pill '+statusKind(u.status)+'">'+statusText(u.status)+'</span>'+(u.status==='pending_review'?'<button class="tiny-button" data-action="approve-user" data-id="'+u.id+'">Aprovar</button><button class="tiny-button danger" data-action="reject-user" data-id="'+u.id+'">Rejeitar</button>':'')+'</div></article>').join('')+'</div>'}
+function accountList(users){
+ if(!users.length)return '<div class="role-empty"><b>Nenhuma conta profissional pendente</b>Novos proprietários e intermediários vão aparecer aqui.</div>';
+ return '<div class="role-list">'+users.map(user=>{
+  const identity=user.documentName?'BI/NIF: '+user.documentName:'NIF: '+(user.nif||'não informado');
+  return '<article class="role-row"><span class="host-avatar">'+esc((user.name||'U')[0].toUpperCase())+'</span><div><strong>'+esc(user.name)+' · '+esc(roleNames[user.role]||user.role)+'</strong><small>'+esc(user.email)+' · '+esc(user.phone||'')+' · '+esc(identity)+'</small></div><div class="role-row-actions"><span class="status-pill '+statusKind(user.status)+'">'+statusText(user.status)+'</span>'+(user.status==='pending_review'?'<button class="tiny-button" data-action="approve-user" data-id="'+esc(user.id)+'">Aprovar</button><button class="tiny-button danger" data-action="reject-user" data-id="'+esc(user.id)+'">Rejeitar</button>':'')+'</div></article>';
+ }).join('')+'</div>';
+}
 function adminPropertyList(props){if(!props.length)return '<div class="role-empty"><b>Sem anúncios submetidos</b>Novos imóveis pendentes vão aparecer aqui.</div>';return '<div class="role-list">'+props.map(p=>'<article class="role-row"><img class="role-thumb" src="'+esc(p.image||'assets/imovel-1.png')+'" alt=""><div><strong>'+esc(p.title)+'</strong><small>'+esc(p.ownerName)+' · '+esc(p.province)+' / '+esc(p.municipality)+' · '+money(p.price)+' Kz</small></div><div class="role-row-actions"><span class="status-pill '+statusKind(p.status)+'">'+statusText(p.status)+'</span>'+(p.status==='pending_review'?'<button class="tiny-button" data-action="approve-property" data-id="'+p.id+'">Aprovar</button><button class="tiny-button danger" data-action="reject-property" data-id="'+p.id+'">Rejeitar</button>':'')+'</div></article>').join('')+'</div>'}
 function paymentReport(visits){let paid=visits.filter(v=>v.paid),visitTotal=paid.reduce((sum,v)=>sum+Number(v.fee||fee()),0),rents=load('inter_rent_transactions'),rentConfirmed=rents.filter(x=>x.status==='confirmed'),rentTotal=rentConfirmed.reduce((s,x)=>s+Number(x.rent||0),0),platformIncome=rentConfirmed.reduce((s,x)=>s+Number(x.platformFee||0),0),commissions=load('inter_agent_commissions'),due=commissions.filter(x=>x.status==='due').reduce((s,x)=>s+Number(x.amount||0),0);return '<div class="role-stats">'+statsCard('Visitas confirmadas',paid.length)+statsCard('Rendas recebidas',money(rentTotal)+' Kz')+statsCard('Comissão da plataforma',money(platformIncome)+' Kz')+'</div><div class="role-panel"><h3>Arrendamentos pagos via GPO</h3>'+(!rentConfirmed.length?'<div class="role-empty"><b>Sem rendas confirmadas</b>Os pagamentos de renda e comissões da plataforma aparecerão aqui após a confirmação GPO.</div>':'<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Referência</th><th>Contrato</th><th>Método</th><th>Renda</th><th>Plataforma</th><th>Total</th><th>Estado</th></tr></thead><tbody>'+rentConfirmed.map(x=>{let c=load('inter_rent_contracts').find(y=>y.id===x.contractId);return '<tr><td>'+esc(x.reference)+'</td><td>'+esc(c?c.number:'—')+'</td><td>'+esc(x.method==='reference'?'Referência':'Multicaixa Express')+'</td><td>'+money(x.rent)+' Kz</td><td>'+money(x.platformFee)+' Kz</td><td>'+money(x.total)+' Kz</td><td>Confirmado</td></tr>'}).join('')+'</tbody></table></div>')+'</div><div class="role-panel"><h3>Taxas de visita e obrigações de comissão</h3><p>Visitas pagas: '+money(visitTotal)+' Kz · Comissão de intermediários devida pelos proprietários: '+money(due)+' Kz</p><p class="role-help">A comissão do intermediário é responsabilidade do proprietário e fica separada do valor cobrado ao arrendatário. Na produção, estes estados devem vir de webhooks GPO verificados.</p></div>'}
 function syncPublicListing(propertyId){let p=getProps().find(x=>String(x.id)===String(propertyId));if(!p||p.status!=='active'||!window.marketplaceData)return;let pub=publicListing(p),i=window.marketplaceData.properties.findIndex(x=>String(x.id)===String(propertyId));if(i<0)window.marketplaceData.properties.push(pub);else window.marketplaceData.properties[i]=pub;window.marketplaceData.render()}
@@ -62,6 +110,63 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#overlay').class
 refreshHeader();
 window.__roles={renderPanel,toastMsg};
 if(window.Api?.enabled()){
+ let adminUsers=null,adminUsersError='';
+ const localAdminPanel=adminPanel;
+ adminPanel=function(){
+  if(activePanel!=='accounts')return localAdminPanel();
+  const content=adminUsersError
+   ?'<div class="role-notice">Não foi possível carregar as contas: '+esc(adminUsersError)+'</div>'
+   :adminUsers===null
+    ?'<div class="role-empty">A carregar contas da API...</div>'
+    :accountList(adminUsers);
+  return head('Validar contas','Verifique BI/NIF e aprove ou rejeite contas de proprietário e intermediário.')
+   +'<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-admin-users">Atualizar lista</button></div>'
+   +content;
+ };
+ async function syncAdminUsers(showErrors){
+  try{
+   const users=[];
+   let page=1,lastPage=1;
+   do{
+    const response=await Api.admin.users({status:'pending_review',page});
+    users.push(...Api.rows(response));
+    const meta=response?.meta||response?.data?.meta||response?.data?.data?.meta;
+    lastPage=Number(meta?.last_page||page);
+    page++;
+   }while(page<=lastPage);
+   adminUsers=users.filter(user=>(user.role==='owner'||user.role==='agent')&&user.status==='pending_review');
+   adminUsersError='';
+   if(activePanel==='accounts')renderPanel();
+  }catch(error){
+   adminUsersError=error.message;
+   if(activePanel==='accounts')renderPanel();
+   if(showErrors)toastMsg('Não foi possível carregar as contas: '+error.message);
+  }
+ }
+ document.addEventListener('click',event=>{
+  const panel=event.target.closest('#roleMount [data-panel="accounts"]');
+  if(!panel||current?.role!=='admin')return;
+  setTimeout(()=>syncAdminUsers(true),0);
+ },true);
+ document.addEventListener('click',async event=>{
+  const refresh=event.target.closest('#roleMount [data-action="refresh-admin-users"]');
+  const review=event.target.closest('#roleMount [data-action="approve-user"],#roleMount [data-action="reject-user"]');
+  if(!refresh&&!review)return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  if(!Api.getToken()){toastMsg('Inicie sessão como administrador para gerir contas.');return}
+  if(refresh){refresh.disabled=true;await syncAdminUsers(true);return}
+  review.disabled=true;
+  try{
+   const approved=review.dataset.action==='approve-user';
+   await Api.admin.reviewUser(review.dataset.id,{status:approved?'active':'rejected'});
+   toastMsg(approved?'Conta aprovada.':'Conta rejeitada.');
+   await syncAdminUsers(false);
+  }catch(error){
+   toastMsg('Não foi possível actualizar a conta: '+error.message);
+   if(review.isConnected)review.disabled=false;
+  }
+ },true);
  let commissionPollTimer=null,commissionPollId=null;
  window.__apiCommissionsLoaded=false;
  commissionPanel=function(view){if(!window.__apiCommissionsLoaded)return '<div class="role-empty">A carregar comissões da API...</div>';let list=load('inter_agent_commissions').filter(c=>view==='owner'?c.ownerEmail===current.email:c.agentEmail===current.email);if(!list.length)return '<div class="role-empty"><b>Sem comissões de arrendamento</b>As comissões aparecem após confirmação de um arrendamento.</div>';return '<div class="role-panel"><div class="role-list">'+list.map(c=>{const paid=c.payment?.status==='paid',pending=c.payment?.status==='pending';return '<div class="commission-row"><div><b>'+esc(c.propertyTitle||'Imóvel')+'</b><small>'+(view==='owner'?'Intermediário: '+esc(c.agentName||'—'):'Proprietário: '+esc(c.ownerName||'—'))+' · '+Number(c.rate||0)+'% da primeira renda</small></div><div style="text-align:right"><strong>'+money(c.amount)+' Kz</strong><small>'+(paid?'Liquidada via GPO FACI':pending?'Aguardando pagamento GPO FACI':'Comissão devida pelo proprietário')+'</small>'+(view==='owner'&&!paid&&!pending?'<button class="tiny-button" data-action="settle-commission" data-id="'+esc(c.id)+'">Pagar via GPO FACI →</button>':'')+'</div></div>'}).join('')+'</div><p class="role-help">A comissão do intermediário é paga pelo proprietário, nunca pelo arrendatário.</p></div>'};
@@ -82,7 +187,7 @@ if(window.Api?.enabled()){
   if(e.target.id!=='accessForm')return;
   e.preventDefault();e.stopImmediatePropagation();
   const form=e.target,fd=new FormData(form),register=!!form.querySelector('[name="name"]'),button=form.querySelector('button[type="submit"]');
-  if(register&&fd.get('role')==='admin'){toastMsg('Contas de administrador são provisionadas pela equipa da plataforma.');return}
+  if(register&&!['client','owner','agent'].includes(fd.get('role'))){toastMsg('Selecione um perfil disponível para criar a conta.');return}
   button.disabled=true;
   try{
    let response;
