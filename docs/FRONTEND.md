@@ -2,7 +2,7 @@
 
 ## Estado atual
 
-Em desenvolvimento, `config.js` está configurado com `USE_API: true` e `API_BASE_URL: 'http://127.0.0.1:8000/api/v1'`. Altere a URL para o domínio da API ao publicar.
+`config.js` está configurado com `USE_API: true` e `API_BASE_URL: 'https://intermed.api.drip.infinityfree.me/api/v1'`.
 
 Já fazem pedidos à API: carregamento do catálogo; registo, login e logout; favoritos; criação de imóveis e convites de intermediários; gravação de disponibilidade e check-in; criação de visitas e arrendamentos; pedidos/respostas da comunidade; e gravação das configurações administrativas. O token Bearer fica em `localStorage['inter_token']`.
 
