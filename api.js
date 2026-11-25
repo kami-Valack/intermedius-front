@@ -70,7 +70,7 @@
     admin: {
       stats: () => get('/admin/stats'), users: q => get('/admin/users' + qs(q)), reviewUser: (id, b) => patch('/admin/users/' + id, b),
       properties: q => get('/admin/properties' + qs(q)), reviewProperty: (id, b) => patch('/admin/properties/' + id, b),
-      payments: () => get('/admin/payments'), settings: () => get('/admin/settings'), saveSettings: b => put('/admin/settings', b)
+      payments: q => get('/admin/payments' + qs(q)), settings: () => get('/admin/settings'), saveSettings: b => put('/admin/settings', b)
     }
   };
 })();

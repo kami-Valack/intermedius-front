@@ -76,7 +76,7 @@ function commissionPanel(view){let list=load('inter_agent_commissions');list=lis
 function ownerPanel(){if(activePanel==='community')return window.communityPanel(current);let props=myProperties(),auth=getAgents().filter(a=>a.ownerEmail===current.email),visits=ownedVisitList();if(activePanel==='create')return head('Cadastrar imóvel','Registe o imóvel em nome do proprietário. O anúncio segue para revisão administrativa.')+createPropertyForm();if(activePanel==='properties')return head('Os meus imóveis','Gerir anúncios submetidos e respectivo estado.')+propertiesList(props,true);if(activePanel==='agents')return head('Intermediários autorizados','Convide, autorize ou revogue intermediários nos seus imóveis.')+agentInviteForm(props)+agentList(auth,'owner');if(activePanel==='visits')return head('Visitas aos seus imóveis','Acompanhe visitas pagas e o respectivo estado.')+visitList(visits);if(activePanel==='commissions')return head('Comissão do intermediário','A comissão acordada é da responsabilidade do proprietário, nunca do arrendatário.')+commissionPanel('owner');if(activePanel==='leases')return head('Arrendamentos e contratos','Primeira renda paga pela GPO e contratos emitidos.')+contractList('owner');let pending=props.filter(p=>p.status==='pending_review').length;return head('Painel do proprietário','Gestão de anúncios e autorizações.',{text:current.status==='active'?'Conta verificada':'BI/NIF em validação',kind:current.status==='active'?'active':'pending'})+'<div class="role-stats">'+statsCard('Imóveis cadastrados',props.length)+statsCard('Aguardam aprovação',pending)+statsCard('Visitas pagas',visits.filter(v=>v.paid).length)+'</div><div class="role-hero"><div><strong>O seu imóvel, sob o seu controlo.</strong><span>Cadastre anúncios e escolha os intermediários autorizados.</span></div><span class="role-hero-mark">⌂</span></div><div class="role-panel"><h3>Atalhos</h3><div class="role-row-actions" style="justify-content:flex-start"><button class="primary-button" data-panel="create">+ Cadastrar imóvel</button><button class="secondary-button" data-panel="agents">Autorizar intermediário</button></div></div>'+propertiesList(props.slice(0,3),false)}
 function createPropertyForm(){return '<div class="role-notice">Proprietários e intermediários podem cadastrar imóveis. Cada imóvel só pode ser publicado uma vez; depois podem ser vinculados até 5 intermediários. Após submeter, o anúncio fica pendente de aprovação.</div><form class="role-panel role-form" id="propertyForm"><div class="role-field full"><label>Título do anúncio</label><input name="title" required placeholder="Ex.: Apartamento T3 com varanda"></div><div class="role-field"><label>Categoria</label><select name="category"><option value="rent">Arrendamento</option><option value="sale">Compra / venda</option><option value="commercial">Comercial</option></select></div><div class="role-field"><label>Tipo de imóvel</label><select name="type"><option>Apartamento</option><option>Vivenda</option><option>Quarto</option><option>Loja</option><option>Escritório</option><option>Armazém</option><option>Terreno</option></select></div><div class="role-field"><label>Preço (Kz)</label><input name="price" type="number" min="1" required placeholder="180000"></div><div class="role-field"><label>Província</label><select name="province"><option>Luanda</option><option>Benguela</option><option>Huíla</option><option>Huambo</option><option>Namibe</option><option>Cabinda</option><option>Outra</option></select></div><div class="role-field"><label>Município</label><input name="municipality" required placeholder="Talatona"></div><div class="role-field"><label>Bairro</label><input name="neighborhood" required placeholder="Talatona"></div><div class="role-field"><label>Quartos</label><input name="bedrooms" type="number" min="0" value="2"></div><div class="role-field"><label>Casas de banho</label><input name="baths" type="number" min="0" value="1"></div><div class="role-field"><label>Área (m²)</label><input name="area" type="number" min="1" placeholder="100"></div><div class="role-field full"><label>Morada exacta (privada)</label><input name="privateAddress" required placeholder="Rua, número, condomínio"></div><div class="role-field full"><label>Pino exacto · latitude e longitude (privado)</label><div class="role-form"><input name="privatePoint" required placeholder="-8.8390, 13.2894" aria-label="Coordenadas exactas"><div class="pin-picker" aria-hidden="true">⌖</div></div><p class="role-help">No MVP real, a morada e coordenadas exactas ficam no servidor e são ocultadas até ao pagamento. Aqui o campo é apenas uma demonstração local.</p></div><div class="role-field full"><label>Descrição</label><textarea name="description" required placeholder="Descreva o imóvel e os seus pontos fortes"></textarea></div><div class="role-field full"><label>Comodidades (separadas por vírgula)</label><input name="amenities" placeholder="Varanda, segurança 24h, estacionamento"></div>'+window.mediaField()+'<div class="role-form-actions"><button type="button" class="secondary-button" data-panel="properties">Cancelar</button><button class="primary-button" type="submit">Submeter para aprovação →</button></div></form>'}
 function propertiesList(list,manage){if(!list.length)return '<div class="role-empty"><b>Ainda não há imóveis</b>Cadastre um imóvel para começar.</div>';return '<div class="role-list">'+list.map(p=>'<article class="role-row"><img class="role-thumb" src="'+esc(p.image||'assets/imovel-1.png')+'" alt=""><div><strong>'+esc(p.title)+'</strong><small>'+esc(p.municipality)+' · '+money(p.price)+' Kz · '+statusText(p.status)+'</small></div><div class="role-row-actions"><span class="status-pill '+statusKind(p.status)+'">'+statusText(p.status)+'</span>'+(manage&&p.status!=='active'?'<button class="tiny-button danger" data-action="delete-property" data-id="'+p.id+'">Remover</button>':'')+'</div></article>').join('')+'</div>'}
-function statusText(s){return ({pending_review:'Em revisão',active:'Publicado',rejected:'Rejeitado',rented:'Arrendado',sold:'Vendido',pending:'Pendente',approved:'Autorizado',revoked:'Revogado',completed:'Concluída',scheduled:'Agendada'})[s]||s||'Pendente'}function statusKind(s){return s==='active'||s==='approved'||s==='completed'?'active':s==='rejected'||s==='revoked'?'rejected':'pending'}
+function statusText(s){return ({pending_review:'Em revisão',active:'Publicado',rejected:'Rejeitado',rented:'Arrendado',sold:'Vendido',pending:'Pendente',pending_payment:'Aguardando pagamento',paid:'Pago',failed:'Falhou',cancelled:'Cancelado',expired:'Expirado',approved:'Autorizado',revoked:'Revogado',completed:'Concluída',scheduled:'Agendada'})[s]||s||'Pendente'}function statusKind(s){return s==='active'||s==='approved'||s==='completed'||s==='paid'?'active':s==='rejected'||s==='revoked'||s==='failed'||s==='cancelled'||s==='expired'?'rejected':'pending'}
 function agentInviteForm(props){return '<form class="role-panel role-form" id="agentInviteForm"><h3 class="role-field full">Convidar intermediário</h3><div class="role-field"><label>Imóvel</label><select name="propertyId" required>'+props.map(p=>'<option value="'+p.id+'">'+esc(p.title)+'</option>').join('')+'</select></div><div class="role-field"><label>E-mail do intermediário</label><input type="email" name="agentEmail" required placeholder="agente@email.com"></div><div class="role-field"><label>Comissão do intermediário (%)</label><input name="commissionPct" type="number" min="0" max="100" step="0.1" value="5"></div><div class="role-field full"><label>Termos adicionais (opcional)</label><input name="terms" placeholder="Condições acordadas"></div><div class="role-form-actions"><button class="primary-button" type="submit" '+(!props.length?'disabled':'')+'>Enviar autorização →</button></div><p class="role-help role-field full">Será criado um ID de rastreio único para o link do intermediário. A autorização pode ser revogada a qualquer momento.</p></form>'}
 function agentList(list,ownerMode){if(!list.length)return '<div class="role-empty"><b>Sem autorizações ainda</b>Convide um intermediário pelo e-mail da conta.</div>';return '<div class="role-list">'+list.map(a=>{let p=getProps().find(x=>String(x.id)===String(a.propertyId));return '<article class="role-row"><span class="host-avatar">'+esc((a.agentName||a.agentEmail)[0].toUpperCase())+'</span><div><strong>'+esc(p?p.title:'Imóvel removido')+'</strong><small>'+esc(a.agentName||a.agentEmail)+' · ID de rastreio <b class="role-code">'+esc(a.trackingCode)+'</b></small></div><div class="role-row-actions"><span class="status-pill '+statusKind(a.status)+'">'+statusText(a.status)+'</span>'+(ownerMode&&a.status==='pending'?'<button class="tiny-button" data-action="approve-agent" data-id="'+a.id+'">Autorizar</button>':'')+(ownerMode&&a.status!=='revoked'?'<button class="tiny-button danger" data-action="revoke-agent" data-id="'+a.id+'">Revogar</button>':'')+(!ownerMode&&a.status==='pending'?'<button class="tiny-button" data-action="accept-agent" data-id="'+a.id+'">Aceitar</button><button class="tiny-button danger" data-action="decline-agent" data-id="'+a.id+'">Recusar</button>':'')+(!ownerMode&&a.status==='approved'?'<button class="tiny-button neutral" data-action="copy-ref" data-ref="'+a.trackingCode+'">Copiar link ?ref=</button>':'')+'</div></article>'}).join('')+'</div>'}
 function visitList(list){if(!list.length)return '<div class="role-empty"><b>Sem visitas registadas</b>As visitas pagas vão aparecer aqui.</div>';return '<div class="role-list">'+list.map(v=>'<article class="role-row"><img class="role-thumb" src="'+esc(v.image||'assets/imovel-1.png')+'" alt=""><div><strong>'+esc(v.title)+'</strong><small>'+esc(new Date(v.scheduled).toLocaleString('pt-AO',{dateStyle:'medium',timeStyle:'short'}))+' · '+esc(v.agent||'Intermediário')+' · '+(v.paid?'Pagamento confirmado':'Pagamento pendente')+'</small><small>Código de visita <b class="role-code">'+esc(v.code)+'</b> · '+statusText(v.visitStatus||'scheduled')+'</small></div><span class="status-pill '+(v.paid?'active':'pending')+'">'+(v.paid?'Paga':'Pendente')+'</span></article>').join('')+'</div>'}
@@ -93,7 +93,24 @@ function accountList(users){
   return '<article class="role-row"><span class="host-avatar">'+esc((user.name||'U')[0].toUpperCase())+'</span><div><strong>'+esc(user.name)+' · '+esc(roleNames[user.role]||user.role)+'</strong><small>'+esc(user.email)+' · '+esc(user.phone||'')+' · '+esc(identity)+'</small></div><div class="role-row-actions"><span class="status-pill '+statusKind(user.status)+'">'+statusText(user.status)+'</span>'+(user.status==='pending_review'?'<button class="tiny-button" data-action="approve-user" data-id="'+esc(user.id)+'">Aprovar</button><button class="tiny-button danger" data-action="reject-user" data-id="'+esc(user.id)+'">Rejeitar</button>':'')+'</div></article>';
  }).join('')+'</div>';
 }
-function adminPropertyList(props){if(!props.length)return '<div class="role-empty"><b>Sem anúncios submetidos</b>Novos imóveis pendentes vão aparecer aqui.</div>';return '<div class="role-list">'+props.map(p=>'<article class="role-row"><img class="role-thumb" src="'+esc(p.image||'assets/imovel-1.png')+'" alt=""><div><strong>'+esc(p.title)+'</strong><small>'+esc(p.ownerName)+' · '+esc(p.province)+' / '+esc(p.municipality)+' · '+money(p.price)+' Kz</small></div><div class="role-row-actions"><span class="status-pill '+statusKind(p.status)+'">'+statusText(p.status)+'</span>'+(p.status==='pending_review'?'<button class="tiny-button" data-action="approve-property" data-id="'+p.id+'">Aprovar</button><button class="tiny-button danger" data-action="reject-property" data-id="'+p.id+'">Rejeitar</button>':'')+'</div></article>').join('')+'</div>'}
+function adminPropertyList(properties){
+ if(!properties.length)return '<div class="role-empty"><b>Sem imóveis pendentes</b>Novos imóveis enviados para revisão vão aparecer aqui.</div>';
+ return '<div class="role-list">'+properties.map(property=>{
+  const owner=property.owner?.name||property.owner_name||property.ownerName||'Publicador';
+  return '<article class="role-row"><img class="role-thumb" src="'+esc(property.image||'assets/imovel-1.png')+'" alt=""><div><strong>'+esc(property.title)+'</strong><small>'+esc(owner)+' · '+esc(property.province||'')+' / '+esc(property.municipality||'')+' · '+money(property.price)+' Kz</small></div><div class="role-row-actions"><span class="status-pill '+statusKind(property.status)+'">'+statusText(property.status)+'</span>'+(property.status==='pending_review'?'<button class="tiny-button" data-action="approve-property" data-id="'+esc(property.id)+'">Aprovar</button><button class="tiny-button danger" data-action="reject-property" data-id="'+esc(property.id)+'">Rejeitar</button>':'')+'</div></article>';
+ }).join('')+'</div>';
+}
+function adminPaymentList(payments){
+ if(!payments.length)return '<div class="role-empty"><b>Sem pagamentos registados</b>Os pagamentos confirmados e pendentes aparecerão aqui.</div>';
+ const purposes={visit:'Visita',rental:'Arrendamento',commission:'Comissão'};
+ return '<div class="role-list">'+payments.map(payment=>{
+  const date=payment.created_at?new Date(payment.created_at).toLocaleString('pt-AO'):'—';
+  return '<article class="role-row"><span class="host-avatar">P</span><div><strong>'+esc(purposes[payment.purpose]||payment.purpose||'Pagamento')+' · '+esc(payment.method||'GPO FACI')+'</strong><small>Referência: '+esc(payment.reference||'—')+' · '+esc(date)+'</small></div><div class="role-row-actions"><strong>'+money(payment.amount)+' '+esc(payment.currency||'AOA')+'</strong><span class="status-pill '+statusKind(payment.status)+'">'+statusText(payment.status)+'</span></div></article>';
+ }).join('')+'</div>';
+}
+function adminSettingsForm(settings){
+ return '<form class="role-panel role-form" id="feeForm"><h3 class="role-field full">Valores e percentagens</h3><div class="role-field"><label>Taxa da visita (Kz)</label><input name="fee" type="number" min="0" value="'+Number(settings.visit_fee||0)+'" required></div><div class="role-field"><label>Comissão da plataforma sobre a renda (%)</label><input name="platformPct" type="number" min="0" max="100" step="0.1" value="'+Number(settings.platform_commission_pct||0)+'" required></div><div class="role-field"><label>Comissão padrão do intermediário, paga pelo proprietário (%)</label><input name="agentPct" type="number" min="0" max="100" step="0.1" value="'+Number(settings.agent_commission_pct||0)+'" required></div><div class="role-notice role-field full">Estas percentagens são parâmetros da plataforma. A comissão do intermediário não é adicionada à cobrança do arrendatário.</div><div class="role-form-actions"><button class="primary-button">Guardar configurações</button></div></form>';
+}
 function paymentReport(visits){let paid=visits.filter(v=>v.paid),visitTotal=paid.reduce((sum,v)=>sum+Number(v.fee||fee()),0),rents=load('inter_rent_transactions'),rentConfirmed=rents.filter(x=>x.status==='confirmed'),rentTotal=rentConfirmed.reduce((s,x)=>s+Number(x.rent||0),0),platformIncome=rentConfirmed.reduce((s,x)=>s+Number(x.platformFee||0),0),commissions=load('inter_agent_commissions'),due=commissions.filter(x=>x.status==='due').reduce((s,x)=>s+Number(x.amount||0),0);return '<div class="role-stats">'+statsCard('Visitas confirmadas',paid.length)+statsCard('Rendas recebidas',money(rentTotal)+' Kz')+statsCard('Comissão da plataforma',money(platformIncome)+' Kz')+'</div><div class="role-panel"><h3>Arrendamentos pagos via GPO</h3>'+(!rentConfirmed.length?'<div class="role-empty"><b>Sem rendas confirmadas</b>Os pagamentos de renda e comissões da plataforma aparecerão aqui após a confirmação GPO.</div>':'<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Referência</th><th>Contrato</th><th>Método</th><th>Renda</th><th>Plataforma</th><th>Total</th><th>Estado</th></tr></thead><tbody>'+rentConfirmed.map(x=>{let c=load('inter_rent_contracts').find(y=>y.id===x.contractId);return '<tr><td>'+esc(x.reference)+'</td><td>'+esc(c?c.number:'—')+'</td><td>'+esc(x.method==='reference'?'Referência':'Multicaixa Express')+'</td><td>'+money(x.rent)+' Kz</td><td>'+money(x.platformFee)+' Kz</td><td>'+money(x.total)+' Kz</td><td>Confirmado</td></tr>'}).join('')+'</tbody></table></div>')+'</div><div class="role-panel"><h3>Taxas de visita e obrigações de comissão</h3><p>Visitas pagas: '+money(visitTotal)+' Kz · Comissão de intermediários devida pelos proprietários: '+money(due)+' Kz</p><p class="role-help">A comissão do intermediário é responsabilidade do proprietário e fica separada do valor cobrado ao arrendatário. Na produção, estes estados devem vir de webhooks GPO verificados.</p></div>'}
 function syncPublicListing(propertyId){let p=getProps().find(x=>String(x.id)===String(propertyId));if(!p||p.status!=='active'||!window.marketplaceData)return;let pub=publicListing(p),i=window.marketplaceData.properties.findIndex(x=>String(x.id)===String(propertyId));if(i<0)window.marketplaceData.properties.push(pub);else window.marketplaceData.properties[i]=pub;window.marketplaceData.render()}
 function handleWorkspaceClick(e){let btn=e.target.closest('button');if(!btn)return;if(btn.dataset.action==='copy-ref'){let link=location.origin+location.pathname+'?ref='+encodeURIComponent(btn.dataset.ref);if(navigator.clipboard)navigator.clipboard.writeText(link).then(()=>toastMsg('Link rastreável copiado'));else toastMsg(link);return}if(btn.dataset.panel){activePanel=btn.dataset.panel;renderPanel();$('#roleMount').querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===activePanel));return}let action=btn.dataset.action,id=btn.dataset.id;if(!action){if(btn.id==='goExplore'){leaveWorkspace();return}return}if(action==='settle-commission'){let list=load('inter_agent_commissions').map(c=>c.id===id?{...c,status:'paid',paymentMethod:'gpo',paidAt:new Date().toISOString()}:c);save('inter_agent_commissions',list);toastMsg('Liquidação GPO registada (demonstração)')}if(action==='delete-property'){let props=getProps().filter(p=>String(p.id)!==id);save(KEY.properties,props)}if(action==='approve-user'||action==='reject-user'){let users=getUsers().map(u=>u.id===id?{...u,status:action==='approve-user'?'active':'rejected'}:u);save(KEY.users,users)}if(action==='approve-property'||action==='reject-property'){let props=getProps().map(p=>String(p.id)===id?{...p,status:action==='approve-property'?'active':'rejected'}:p);save(KEY.properties,props);if(action==='approve-property'){let p=props.find(x=>String(x.id)===id);if(p&&window.marketplaceData){let pub=publicListing(p);let idx=window.marketplaceData.properties.findIndex(x=>String(x.id)===id);if(idx<0)window.marketplaceData.properties.push(pub);window.marketplaceData.render()}}}if(action==='approve-agent'||action==='revoke-agent'||action==='accept-agent'||action==='decline-agent'){let agents=getAgents().map(a=>a.id===id?{...a,status:action==='revoke-agent'||action==='decline-agent'?'revoked':'approved',acceptedAt:new Date().toISOString()}:a);save(KEY.agents,agents);let changed=agents.find(a=>a.id===id);if(changed)syncPublicListing(changed.propertyId)}renderPanel()}
@@ -110,19 +127,68 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#overlay').class
 refreshHeader();
 window.__roles={renderPanel,toastMsg};
 if(window.Api?.enabled()){
- let adminUsers=null,adminUsersError='';
+ let adminUsers=null,adminUsersError='',adminProperties=null,adminPropertiesError='',adminStats=null,adminStatsError='',adminPayments=null,adminPaymentsError='',adminSettings=null,adminSettingsError='';
  const localAdminPanel=adminPanel;
  adminPanel=function(){
-  if(activePanel!=='accounts')return localAdminPanel();
-  const content=adminUsersError
-   ?'<div class="role-notice">Não foi possível carregar as contas: '+esc(adminUsersError)+'</div>'
-   :adminUsers===null
-    ?'<div class="role-empty">A carregar contas da API...</div>'
-    :accountList(adminUsers);
-  return head('Validar contas','Verifique BI/NIF e aprove ou rejeite contas de proprietário e intermediário.')
-   +'<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-admin-users">Atualizar lista</button></div>'
-   +content;
+  if(activePanel==='overview'){
+   const stats=adminStats||{};
+   return head('Painel administrativo','Validação, moderação e auditoria do MVP.')
+    +(adminStatsError?'<div class="role-notice">Não foi possível carregar os indicadores: '+esc(adminStatsError)+'</div>':'')
+    +'<div class="role-stats">'+statsCard('Contas por validar',adminStats?Number(stats.users_pending||0):'—')+statsCard('Imóveis em revisão',adminStats?Number(stats.properties_pending||0):'—')+statsCard('Visitas pagas',adminStats?Number(stats.visits_paid||0):'—')+'</div><div class="role-hero"><div><strong>Fila de moderação</strong><span>Valide identidades e qualidade dos anúncios.</span></div><span class="role-hero-mark">✓</span></div><div class="role-row-actions" style="justify-content:flex-start"><button class="primary-button" data-panel="accounts">Validar contas</button><button class="secondary-button" data-panel="properties">Rever imóveis</button><button class="secondary-button" data-panel="payments">Auditar pagamentos</button></div>';
+  }
+  if(activePanel==='accounts'){
+   const content=adminUsersError
+    ?'<div class="role-notice">Não foi possível carregar as contas: '+esc(adminUsersError)+'</div>'
+    :adminUsers===null
+     ?'<div class="role-empty">A carregar contas da API...</div>'
+     :accountList(adminUsers);
+   return head('Validar contas','Verifique BI/NIF e aprove ou rejeite contas de proprietário e intermediário.')
+    +'<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-admin-users">Atualizar lista</button></div>'
+    +content;
+  }
+  if(activePanel==='properties'){
+   const content=adminPropertiesError
+    ?'<div class="role-notice">Não foi possível carregar os imóveis: '+esc(adminPropertiesError)+'</div>'
+    :adminProperties===null
+     ?'<div class="role-empty">A carregar imóveis da API...</div>'
+     :adminPropertyList(adminProperties);
+   return head('Moderar imóveis','Revise anúncios pendentes enviados à API antes de os disponibilizar ao público.')
+    +'<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-admin-properties">Atualizar lista</button></div>'
+    +content;
+  }
+  if(activePanel==='payments'){
+   const content=adminPaymentsError
+    ?'<div class="role-notice">Não foi possível carregar os pagamentos: '+esc(adminPaymentsError)+'</div>'
+    :adminPayments===null
+     ?'<div class="role-empty">A carregar pagamentos da API...</div>'
+     :adminPaymentList(adminPayments);
+   return head('Pagamentos GPO FACI','Pagamentos e referências devolvidos pelo backend.')
+    +'<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-admin-payments">Atualizar lista</button></div>'
+    +content;
+  }
+  if(activePanel==='settings'){
+   const content=adminSettingsError
+    ?'<div class="role-notice">Não foi possível carregar as configurações: '+esc(adminSettingsError)+'</div>'
+    :adminSettings===null
+     ?'<div class="role-empty">A carregar configurações da API...</div>'
+     :adminSettingsForm(adminSettings);
+   return head('Configurações da plataforma','Taxa de visita e comissões percentuais do fluxo de arrendamento.')
+    +'<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-admin-settings">Atualizar valores</button></div>'
+    +content;
+  }
+  return localAdminPanel();
  };
+ async function syncAdminStats(showErrors){
+  try{
+   adminStats=Api.resource(await Api.admin.stats());
+   adminStatsError='';
+   if(activePanel==='overview')renderPanel();
+  }catch(error){
+   adminStatsError=error.message;
+   if(activePanel==='overview')renderPanel();
+   if(showErrors)toastMsg('Não foi possível carregar os indicadores: '+error.message);
+  }
+ }
  async function syncAdminUsers(showErrors){
   try{
    const users=[];
@@ -143,27 +209,101 @@ if(window.Api?.enabled()){
    if(showErrors)toastMsg('Não foi possível carregar as contas: '+error.message);
   }
  }
+ async function syncAdminProperties(showErrors){
+  try{
+   const properties=[];
+   let page=1,lastPage=1;
+   do{
+    const response=await Api.admin.properties({status:'pending_review',page});
+    properties.push(...Api.rows(response));
+    const meta=response?.meta||response?.data?.meta||response?.data?.data?.meta;
+    lastPage=Number(meta?.last_page||page);
+    page++;
+   }while(page<=lastPage);
+   adminProperties=properties.filter(property=>property.status==='pending_review');
+   adminPropertiesError='';
+   if(activePanel==='properties')renderPanel();
+  }catch(error){
+   adminPropertiesError=error.message;
+   if(activePanel==='properties')renderPanel();
+   if(showErrors)toastMsg('Não foi possível carregar os imóveis: '+error.message);
+  }
+ }
+ async function syncAdminPayments(showErrors){
+  try{
+   const payments=[];
+   let page=1,lastPage=1;
+   do{
+    const response=await Api.admin.payments({page});
+    payments.push(...Api.rows(response));
+    const meta=response?.meta||response?.data?.meta||response?.data?.data?.meta;
+    lastPage=Number(meta?.last_page||page);
+    page++;
+   }while(page<=lastPage);
+   adminPayments=payments;
+   adminPaymentsError='';
+   if(activePanel==='payments')renderPanel();
+  }catch(error){
+   adminPaymentsError=error.message;
+   if(activePanel==='payments')renderPanel();
+   if(showErrors)toastMsg('Não foi possível carregar os pagamentos: '+error.message);
+  }
+ }
+ async function syncAdminSettings(showErrors){
+  try{
+   adminSettings=Api.resource(await Api.admin.settings());
+   adminSettingsError='';
+   if(activePanel==='settings')renderPanel();
+  }catch(error){
+   adminSettingsError=error.message;
+   if(activePanel==='settings')renderPanel();
+   if(showErrors)toastMsg('Não foi possível carregar as configurações: '+error.message);
+  }
+ }
  document.addEventListener('click',event=>{
-  const panel=event.target.closest('#roleMount [data-panel="accounts"]');
+  if(!event.target.closest('#profileButton,#workspaceButton')||current?.role!=='admin')return;
+  setTimeout(()=>syncAdminStats(true),0);
+ },true);
+ document.addEventListener('click',event=>{
+  const panel=event.target.closest('#roleMount [data-panel="accounts"],#roleMount [data-panel="properties"],#roleMount [data-panel="payments"],#roleMount [data-panel="settings"]');
   if(!panel||current?.role!=='admin')return;
-  setTimeout(()=>syncAdminUsers(true),0);
+  setTimeout(()=>{
+   if(panel.dataset.panel==='accounts')syncAdminUsers(true);
+   else if(panel.dataset.panel==='properties')syncAdminProperties(true);
+   else if(panel.dataset.panel==='payments')syncAdminPayments(true);
+   else syncAdminSettings(true);
+  },0);
  },true);
  document.addEventListener('click',async event=>{
   const refresh=event.target.closest('#roleMount [data-action="refresh-admin-users"]');
-  const review=event.target.closest('#roleMount [data-action="approve-user"],#roleMount [data-action="reject-user"]');
-  if(!refresh&&!review)return;
+  const refreshProperties=event.target.closest('#roleMount [data-action="refresh-admin-properties"]');
+  const refreshPayments=event.target.closest('#roleMount [data-action="refresh-admin-payments"]');
+  const refreshSettings=event.target.closest('#roleMount [data-action="refresh-admin-settings"]');
+  const userReview=event.target.closest('#roleMount [data-action="approve-user"],#roleMount [data-action="reject-user"]');
+  const propertyReview=event.target.closest('#roleMount [data-action="approve-property"],#roleMount [data-action="reject-property"]');
+  if(!refresh&&!refreshProperties&&!refreshPayments&&!refreshSettings&&!userReview&&!propertyReview)return;
   event.preventDefault();
   event.stopImmediatePropagation();
   if(!Api.getToken()){toastMsg('Inicie sessão como administrador para gerir contas.');return}
   if(refresh){refresh.disabled=true;await syncAdminUsers(true);return}
+  if(refreshProperties){refreshProperties.disabled=true;await syncAdminProperties(true);return}
+  if(refreshPayments){refreshPayments.disabled=true;await syncAdminPayments(true);return}
+  if(refreshSettings){refreshSettings.disabled=true;await syncAdminSettings(true);return}
+  const review=userReview||propertyReview;
   review.disabled=true;
   try{
-   const approved=review.dataset.action==='approve-user';
-   await Api.admin.reviewUser(review.dataset.id,{status:approved?'active':'rejected'});
-   toastMsg(approved?'Conta aprovada.':'Conta rejeitada.');
-   await syncAdminUsers(false);
+   const approved=review.dataset.action==='approve-user'||review.dataset.action==='approve-property';
+   if(userReview)await Api.admin.reviewUser(review.dataset.id,{status:approved?'active':'rejected'});
+   else await Api.admin.reviewProperty(review.dataset.id,{status:approved?'active':'rejected'});
+   toastMsg(userReview?(approved?'Conta aprovada.':'Conta rejeitada.'):(approved?'Imóvel aprovado.':'Imóvel rejeitado.'));
+   if(userReview)await syncAdminUsers(false);
+   else{
+    await syncAdminProperties(false);
+    if(approved)await window.marketplaceData?.reloadProperties?.();
+   }
+   await syncAdminStats(false);
   }catch(error){
-   toastMsg('Não foi possível actualizar a conta: '+error.message);
+   toastMsg('Não foi possível actualizar '+(userReview?'a conta':'o imóvel')+': '+error.message);
    if(review.isConnected)review.disabled=false;
   }
  },true);
@@ -201,6 +341,7 @@ if(window.Api?.enabled()){
    if(!current?.id)throw new Error('A resposta de autenticação não contém o perfil do utilizador.');
    if(register)phoneVerification={id:'',requestedPhone:'',verifiedPhone:''};
    setCurrent(current);closeAccess();openWorkspace();
+   if(current.role==='admin')syncAdminStats(false);
   }catch(error){toastMsg(error.message||'Não foi possível autenticar.')}
   finally{button.disabled=register&&window.Api?.enabled()?!isPhoneVerificationComplete(form):false}
  },true);
@@ -234,7 +375,8 @@ if(window.Api?.enabled()){
    if(form.id==='checkinForm'){
     await Api.visits.checkin(String(fd.get('visitCode')).trim().toUpperCase());toastMsg('Check-in validado pela API');activePanel='visits';renderPanel();return;
    }
-   await Api.admin.saveSettings({visit_fee:Number(fd.get('fee')),platform_commission_pct:Number(fd.get('platformPct')),agent_commission_pct:Number(fd.get('agentPct'))});
+   adminSettings=Api.resource(await Api.admin.saveSettings({visit_fee:Number(fd.get('fee')),platform_commission_pct:Number(fd.get('platformPct')),agent_commission_pct:Number(fd.get('agentPct'))}));
+   adminSettingsError='';
    localStorage.setItem(KEY.fee,String(Number(fd.get('fee'))));localStorage.setItem('inter_platform_commission_pct',String(Number(fd.get('platformPct'))));localStorage.setItem('inter_agent_commission_pct',String(Number(fd.get('agentPct'))));renderPanel();toastMsg('Configurações guardadas na API');
   }catch(error){toastMsg(error.message||'Não foi possível concluir o pedido')}
   finally{if(button?.isConnected)button.disabled=false}

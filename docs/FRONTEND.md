@@ -4,9 +4,9 @@
 
 `config.js` está configurado com `USE_API: true` e `API_BASE_URL: 'https://intermed.api.drip.infinityfree.me/api/v1'`.
 
-Já fazem pedidos à API: carregamento do catálogo; registo, login e logout; favoritos; criação de imóveis e convites de intermediários; gravação de disponibilidade e check-in; criação de visitas e arrendamentos; pedidos/respostas da comunidade; e gravação das configurações administrativas. O token Bearer fica em `localStorage['inter_token']`.
+O catálogo público usa `GET /properties` e percorre as páginas devolvidas pela API. A área administrativa usa agora a API para indicadores, aprovação de contas e imóveis, pagamentos e leitura/actualização das configurações. O registo, autenticação, favoritos, pagamentos de visitas/arrendamentos/comissões, check-in e operações da comunidade também têm chamadas à API. O token Bearer fica em `localStorage['inter_token']`.
 
-Algumas áreas de gestão ainda dependem de endpoints e permissões do backend. Visitas, arrendamentos e comissões usam as rotas autenticadas indicadas abaixo para criação e consulta do estado de pagamento.
+Ainda há painéis profissionais que usam cache `localStorage` como fonte de apresentação, incluindo imóveis próprios/vinculados, visitas e disponibilidade. A comunidade também precisa carregar inicialmente a lista da API ao abrir o painel. A flag `USE_API: true` não converte automaticamente esses painéis; consultar os pontos em falta antes de considerar a migração completa.
 
 ## Contrato de endpoints
 
@@ -15,14 +15,14 @@ Esta tabela descreve o contrato previsto para completar a integração; a presen
 | Site (localStorage) | API |
 |---|---|
 | `inter_users`, `inter_current` | `POST /auth/phone-verifications`, `POST /auth/phone-verifications/verify`, `POST /auth/register`, `POST /auth/login`, `GET /auth/me` |
-| `inter_custom_properties` | `GET /properties`, `POST /properties` (multipart), `GET /properties/mine`, admin: `PATCH /admin/properties/{id}` |
+| `inter_custom_properties` | `GET /properties`, `POST /properties` (multipart), `GET /properties/mine`, admin: `GET /admin/properties?status=pending_review`, `PATCH /admin/properties/{id}` |
 | `inter_property_agents` | `POST /properties/{id}/agents`, `GET /agent-links`, `PATCH /agent-links/{id}` |
 | `inter_availability` | `GET/PUT /availability` (dias 1=segunda … 7=domingo) |
 | `inter_visits` | `GET/POST /visits`, `POST /visits/checkin` |
 | `inter_rent_*`, `inter_agent_commissions` | `GET/POST /rentals`, `GET /commissions`, `PATCH /commissions/{id}/pay` |
 | `inter_community_*` | `GET/POST /community/requests`, `POST /community/requests/{id}/offers`, `PATCH …/close` |
 | notificações (toast/contador) | `GET /notifications`, `POST /notifications/read-all` |
-| taxas e comissões | `GET/PUT /admin/settings` |
+| área administrativa | `GET /admin/stats`, `GET /admin/users?status=pending_review`, `PATCH /admin/users/{id}`, `GET /admin/payments`, `GET/PUT /admin/settings` |
 
 **Publicar imóvel:** enviar `multipart/form-data` com `photos[]` (5 a 10 imagens), `video` (opcional) e os campos do formulário em `snake_case` (`private_address`, `private_lat`, `private_lng`). Respostas de erro: `422` validação (`errors`), `409` imóvel duplicado, `422` com `code` (`agent_limit`, `slot_taken`, `offer_required`…).
 As URLs de mídia devolvidas pela API têm de ser acessíveis pelo navegador. Se `/storage/...` responder `404`, configure o storage público do Laravel (por exemplo, `php artisan storage:link`) e confirme que os ficheiros existem.
