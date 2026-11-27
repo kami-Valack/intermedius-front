@@ -62,7 +62,7 @@ function setCurrent(user){current=user;save(KEY.current,user);if(window.Api?.ena
 function refreshHeader(){if(!current){$('#profileButton').classList.remove('signed-in');$('#profileButton .avatar').textContent='A';$('#profileButton .profile-name').textContent='Entrar / Criar conta';return}$('#profileButton').classList.add('signed-in');$('#profileButton .avatar').textContent=(current.name||'A').trim().charAt(0).toUpperCase();$('#profileButton .profile-name').textContent=current.name.split(' ')[0]+' · '+roleNames[current.role]}
 function openWorkspace(panel='overview'){if(!current){openAccess('register');return}activePanel=panel;$('.page-shell').hidden=true;$('#roleMount').hidden=false;$('#roleMount').innerHTML='<div class="page-shell role-shell"><div class="role-header"><div class="role-heading"><p class="eyebrow"><span class="live-dot"></span> ÁREA DE '+esc(roleNames[current.role].toUpperCase())+'</p><h1>'+esc(greeting())+'</h1><p>Ferramentas e actividade da sua conta.</p></div><div class="role-actions"><button class="secondary-button" id="backToMarket">← Explorar imóveis</button><button class="secondary-button" id="signOut">Sair da conta</button></div></div><div class="role-layout"><aside class="role-sidebar"><div class="role-user"><span class="avatar">'+esc((current.name||'A')[0].toUpperCase())+'</span><div><strong>'+esc(current.name)+'</strong><small>'+esc(roleNames[current.role])+'</small></div></div><nav class="role-menu">'+menuItems().map(x=>'<button data-panel="'+x.id+'" class="'+(activePanel===x.id?'active':'')+'">'+x.label+'</button>').join('')+'</nav></aside><section class="role-content" id="roleContent"></section></div><p class="role-note">Modo de demonstração local. Aprovações, dados e documentos não são partilhados entre dispositivos nem protegidos por um servidor nesta versão.</p></div>';renderPanel();window.communityNotify&&window.communityNotify();$('#roleMount').onclick=handleWorkspaceClick;$('#roleMount').onsubmit=handleWorkspaceSubmit;$('#signOut').onclick=()=>{localStorage.removeItem(KEY.current);current=null;refreshHeader();leaveWorkspace()};$('#backToMarket').onclick=leaveWorkspace}
 function greeting(){let hour=new Date().getHours();return (hour<12?'Bom dia, ':hour<18?'Boa tarde, ':'Boa noite, ')+(current.name||'').split(' ')[0]}
-function menuItems(){let items={client:[['overview','Visão geral'],['visits','As minhas visitas'],['contracts','Contratos'],['profile','O meu perfil']],owner:[['overview','Visão geral'],['properties','Os meus imóveis'],['create','Cadastrar imóvel'],['agents','Intermediários'],['visits','Visitas'],['leases','Arrendamentos'],['commissions','Comissões']],agent:[['overview','Visão geral'],['properties','Imóveis'],['create','Cadastrar imóvel'],['agents','Intermediários'],['availability','Disponibilidade'],['checkin','Check-in presencial'],['visits','Visitas'],['commissions','Comissões']],admin:[['overview','Visão geral'],['accounts','Validar contas'],['properties','Moderar imóveis'],['payments','Pagamentos GPO'],['settings','Configurações']]};if(window.Api?.enabled()&&current.role==='owner')items.owner.push(['bankDetails','Dados bancários']);if(window.Api?.enabled()&&current.role==='admin')items.admin.splice(items.admin.length-1,0,['ownerPayouts','Repasses a proprietários']);if(current.role!=='admin')(items[current.role]||items.client).push(['community','Comunidade'+(window.communityBadge?window.communityBadge():'')]);return (items[current.role]||items.client).map(x=>({id:x[0],label:x[1]}))}
+function menuItems(){let items={client:[['overview','Visão geral'],['visits','As minhas visitas'],['contracts','Contratos'],['profile','O meu perfil']],owner:[['overview','Visão geral'],['properties','Os meus imóveis'],['create','Cadastrar imóvel'],['agents','Intermediários'],['visits','Visitas'],['leases','Arrendamentos'],['commissions','Comissões']],agent:[['overview','Visão geral'],['properties','Imóveis'],['create','Cadastrar imóvel'],['agents','Intermediários'],['availability','Disponibilidade'],['checkin','Check-in presencial'],['visits','Visitas'],['commissions','Comissões']],admin:[['overview','Visão geral'],['accounts','Validar contas'],['properties','Moderar imóveis'],['payments','Pagamentos GPO'],['settings','Configurações']]};if(window.Api?.enabled()&&(current.role==='owner'||current.role==='agent'))items[current.role].push(['bankDetails','Dados bancários']);if(window.Api?.enabled()&&current.role==='admin')items.admin.splice(items.admin.length-1,0,['ownerPayouts','Repasses a proprietários']);if(current.role!=='admin')(items[current.role]||items.client).push(['community','Comunidade'+(window.communityBadge?window.communityBadge():'')]);return (items[current.role]||items.client).map(x=>({id:x[0],label:x[1]}))}
 function statsCard(label,value){return '<div class="stat-card"><small>'+label+'</small><strong>'+value+'</strong></div>'}
 function renderPanel(){let c=$('#roleContent');if(!c)return;c.innerHTML=current.role==='owner'?ownerPanel():current.role==='agent'?agentPanel():current.role==='admin'?adminPanel():clientPanel();if(window.Api?.enabled()){const note=$('#roleMount .role-shell > .role-note');if(note)note.textContent='A sessão e os dados da conta são carregados pela API configurada.'}}
 function head(title,desc,badge=''){return '<div class="role-content-head"><div><h2>'+title+'</h2><p>'+desc+'</p></div>'+(badge?'<span class="status-pill '+badge.kind+'">'+badge.text+'</span>':'')+'</div>'}
@@ -137,6 +137,7 @@ if(window.Api?.enabled()){
  const localAgentPanel=agentPanel;
  function agentRefreshControl(){return '<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-agent-data">Atualizar dados</button></div>'}
  agentPanel=function(){
+  if(activePanel==='bankDetails')return ownerBankDetailsPanel();
   if(!['overview','properties','agents','availability','visits'].includes(activePanel))return localAgentPanel();
   const title=activePanel==='overview'?'Painel do intermediário':activePanel==='properties'?'Imóveis disponíveis':activePanel==='agents'?'Convites e vínculos':activePanel==='availability'?'Disponibilidade':'As minhas visitas';
   if(agentApiError)return head(title,'Dados sincronizados com a API do backend.')+'<div class="role-notice">Não foi possível carregar os dados do intermediário: '+esc(agentApiError)+'</div>'+agentRefreshControl();
@@ -232,12 +233,13 @@ if(window.Api?.enabled()){
   return agentSyncPromise;
  }
  function ownerBankDetailsPanel(){
+  const accountType=current?.role==='agent'?'intermediário':'proprietário';
   const content=ownerBankDetailsError
    ?'<div class="role-notice">Não foi possível carregar os dados bancários: '+esc(ownerBankDetailsError)+'</div>'
    :!ownerBankDetailsLoaded
     ?'<div class="role-empty">A carregar os dados bancários da API...</div>'
     :'<form id="bankDetailsForm" class="role-form"><div class="role-field full"><label for="bankIban">IBAN</label><input id="bankIban" name="iban" type="text" required maxlength="34" autocomplete="off" value="'+esc(ownerBankDetails?.iban||'')+'" placeholder="AO06000000000000000000000"></div><div class="role-field full"><label for="bankExpressNumber">Número Express</label><input id="bankExpressNumber" name="express_number" type="text" required autocomplete="tel" value="'+esc(ownerBankDetails?.express_number||'')+'" placeholder="+244923000000"></div><p class="role-help full">O IBAN será normalizado pela API. O número Express é guardado como texto.</p><div class="role-form-actions"><button type="submit" class="primary-button">Guardar dados bancários</button></div></form>';
-  return head('Dados bancários','Guarde ou atualize o destino para futuros repasses.')+'<div class="role-panel">'+content+'</div>'
+  return head('Dados bancários','Guarde ou atualize o destino bancário associado à sua conta de '+accountType+'.')+'<div class="role-panel">'+content+'</div>'
    +'<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-bank-details">Atualizar dados</button></div>';
  }
  ownerPanel=function(){
@@ -317,7 +319,7 @@ if(window.Api?.enabled()){
   return '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Proprietário</th><th>Valor mensal</th><th>Arrendamentos ativos</th><th>Destino</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="role-help">A mostrar '+esc(from)+'–'+esc(to)+' de '+esc(meta.total)+' proprietário(s). Valores são rendas mensais estimadas, não pagamentos históricos.</p>'+pageControls;
  }
  async function syncOwnerBankDetails(showErrors){
-  if(current?.role!=='owner'||!Api.getToken())return;
+  if(!['owner','agent'].includes(current?.role)||!Api.getToken())return;
   try{
    ownerBankDetails=Api.resource(await Api.bankDetails.get())||{};
    ownerBankDetailsLoaded=true;ownerBankDetailsError='';
@@ -478,12 +480,12 @@ if(window.Api?.enabled()){
  },true);
  document.addEventListener('click',event=>{
   const panel=event.target.closest('#roleMount [data-panel="bankDetails"]');
-  if(!panel||current?.role!=='owner')return;
+  if(!panel||!['owner','agent'].includes(current?.role))return;
   setTimeout(()=>syncOwnerBankDetails(true),0);
  },true);
  document.addEventListener('click',async event=>{
   const refresh=event.target.closest('#roleMount [data-action="refresh-bank-details"]');
-  if(!refresh||current?.role!=='owner')return;
+  if(!refresh||!['owner','agent'].includes(current?.role))return;
   event.preventDefault();event.stopImmediatePropagation();refresh.disabled=true;
   await syncOwnerBankDetails(true);
   if(refresh.isConnected)refresh.disabled=false;
@@ -570,7 +572,7 @@ if(window.Api?.enabled()){
   const fd=new FormData(form),button=form.querySelector('button[type="submit"]');if(button)button.disabled=true;
   try{
    if(form.id==='bankDetailsForm'){
-    if(current?.role!=='owner'||!Api.getToken())throw new Error('Inicie sessão como proprietário para guardar os dados bancários.');
+    if(!['owner','agent'].includes(current?.role)||!Api.getToken())throw new Error('Inicie sessão como proprietário ou intermediário para guardar os dados bancários.');
     ownerBankDetails=Api.resource(await Api.bankDetails.save({iban:String(fd.get('iban')||'').trim(),express_number:String(fd.get('express_number')||'').trim()}))||{};
     ownerBankDetailsLoaded=true;ownerBankDetailsError='';renderPanel();toastMsg('Dados bancários guardados na API');return;
    }

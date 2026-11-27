@@ -4,7 +4,7 @@
 
 `config.js` está configurado com `USE_API: true` e `API_BASE_URL: 'https://intermed.api.drip.infinityfree.me/api/v1'`.
 
-O catálogo público usa `GET /properties` e percorre as páginas devolvidas pela API. A área administrativa usa a API para indicadores, aprovação de contas e imóveis, pagamentos, configurações e a lista paginada de valores/destinos dos proprietários. O painel do intermediário carrega imóveis, convites/vínculos, visitas e disponibilidade da API; o proprietário pode consultar e atualizar os seus dados bancários pela API. O registo, autenticação, pagamentos e operações da comunidade também têm chamadas à API, embora o carregamento inicial da comunidade ainda precise ser verificado. O token Bearer fica em `localStorage['inter_token']`.
+O catálogo público usa `GET /properties` e percorre as páginas devolvidas pela API. A área administrativa usa a API para indicadores, aprovação de contas e imóveis, pagamentos, configurações e a lista paginada de valores/destinos dos proprietários. Proprietários e intermediários podem consultar e atualizar os dados bancários associados à sua própria conta; o painel do intermediário também carrega imóveis, convites/vínculos, visitas e disponibilidade da API. O registo, autenticação, pagamentos e operações da comunidade também têm chamadas à API, embora o carregamento inicial da comunidade ainda precise ser verificado. O token Bearer fica em `localStorage['inter_token']`.
 
 ## Contrato de endpoints
 
@@ -16,7 +16,7 @@ Esta tabela descreve o contrato previsto para completar a integração; a presen
 | `inter_custom_properties` | `GET /properties`, `POST /properties` (multipart), `GET /properties/mine` (intermediário), admin: `GET /admin/properties?status=pending_review`, `PATCH /admin/properties/{id}` |
 | `inter_property_agents` | `POST /properties/{id}/agents` (publicador), `GET /agent-links`, `PATCH /agent-links/{id}` (intermediário aceita com `approved` ou recusa com `rejected`; proprietário pode revogar com `revoked`) |
 | `inter_availability` | `GET/PUT /availability` (intermediário; dias 1=segunda … 7=domingo; domingo `0` do formulário é enviado como `7`) |
-| dados bancários do proprietário | `GET/PUT /bank-details` (`iban` e `express_number`; requer Bearer token) |
+| dados bancários do proprietário/intermediário | `GET/PUT /bank-details` (`iban` e `express_number`; requer Bearer token e guarda os dados do utilizador autenticado) |
 | `inter_visits` | `GET/POST /visits`, `POST /visits/checkin` (visitas atribuídas são carregadas da API; o código só aparece após pagamento confirmado) |
 | `inter_rent_*`, `inter_agent_commissions` | `GET/POST /rentals`, `GET /commissions`, `PATCH /commissions/{id}/pay` |
 | `inter_community_*` | `GET/POST /community/requests`, `POST /community/requests/{id}/offers`, `PATCH …/close` |
