@@ -57,6 +57,7 @@
       respond: (id, status) => patch('/agent-links/' + id, { status })               // approved | rejected | revoked
     },
     availability: { get: () => get('/availability'), save: b => put('/availability', b) },   // days: 1=segunda … 7=domingo
+    bankDetails: { get: () => get('/bank-details'), save: b => put('/bank-details', b) },
     visits: { list: q => get('/visits' + qs(q)), create: b => post('/visits', b), checkin: code => post('/visits/checkin', { code }) },
     rentals: { list: () => get('/rentals'), create: b => post('/rentals', b) },
     commissions: { list: () => get('/commissions'), pay: (id, body) => patch('/commissions/' + id + '/pay', body) },
@@ -69,7 +70,8 @@
     admin: {
       stats: () => get('/admin/stats'), users: q => get('/admin/users' + qs(q)), reviewUser: (id, b) => patch('/admin/users/' + id, b),
       properties: q => get('/admin/properties' + qs(q)), reviewProperty: (id, b) => patch('/admin/properties/' + id, b),
-      payments: q => get('/admin/payments' + qs(q)), settings: () => get('/admin/settings'), saveSettings: b => put('/admin/settings', b)
+      payments: q => get('/admin/payments' + qs(q)), ownerPayouts: q => get('/admin/owner-payouts' + qs(q)),
+      settings: () => get('/admin/settings'), saveSettings: b => put('/admin/settings', b)
     }
   };
 })();

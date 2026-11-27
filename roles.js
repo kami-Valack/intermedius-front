@@ -62,7 +62,7 @@ function setCurrent(user){current=user;save(KEY.current,user);if(window.Api?.ena
 function refreshHeader(){if(!current){$('#profileButton').classList.remove('signed-in');$('#profileButton .avatar').textContent='A';$('#profileButton .profile-name').textContent='Entrar / Criar conta';return}$('#profileButton').classList.add('signed-in');$('#profileButton .avatar').textContent=(current.name||'A').trim().charAt(0).toUpperCase();$('#profileButton .profile-name').textContent=current.name.split(' ')[0]+' · '+roleNames[current.role]}
 function openWorkspace(panel='overview'){if(!current){openAccess('register');return}activePanel=panel;$('.page-shell').hidden=true;$('#roleMount').hidden=false;$('#roleMount').innerHTML='<div class="page-shell role-shell"><div class="role-header"><div class="role-heading"><p class="eyebrow"><span class="live-dot"></span> ÁREA DE '+esc(roleNames[current.role].toUpperCase())+'</p><h1>'+esc(greeting())+'</h1><p>Ferramentas e actividade da sua conta.</p></div><div class="role-actions"><button class="secondary-button" id="backToMarket">← Explorar imóveis</button><button class="secondary-button" id="signOut">Sair da conta</button></div></div><div class="role-layout"><aside class="role-sidebar"><div class="role-user"><span class="avatar">'+esc((current.name||'A')[0].toUpperCase())+'</span><div><strong>'+esc(current.name)+'</strong><small>'+esc(roleNames[current.role])+'</small></div></div><nav class="role-menu">'+menuItems().map(x=>'<button data-panel="'+x.id+'" class="'+(activePanel===x.id?'active':'')+'">'+x.label+'</button>').join('')+'</nav></aside><section class="role-content" id="roleContent"></section></div><p class="role-note">Modo de demonstração local. Aprovações, dados e documentos não são partilhados entre dispositivos nem protegidos por um servidor nesta versão.</p></div>';renderPanel();window.communityNotify&&window.communityNotify();$('#roleMount').onclick=handleWorkspaceClick;$('#roleMount').onsubmit=handleWorkspaceSubmit;$('#signOut').onclick=()=>{localStorage.removeItem(KEY.current);current=null;refreshHeader();leaveWorkspace()};$('#backToMarket').onclick=leaveWorkspace}
 function greeting(){let hour=new Date().getHours();return (hour<12?'Bom dia, ':hour<18?'Boa tarde, ':'Boa noite, ')+(current.name||'').split(' ')[0]}
-function menuItems(){let items={client:[['overview','Visão geral'],['visits','As minhas visitas'],['contracts','Contratos'],['profile','O meu perfil']],owner:[['overview','Visão geral'],['properties','Os meus imóveis'],['create','Cadastrar imóvel'],['agents','Intermediários'],['visits','Visitas'],['leases','Arrendamentos'],['commissions','Comissões']],agent:[['overview','Visão geral'],['properties','Imóveis'],['create','Cadastrar imóvel'],['agents','Intermediários'],['availability','Disponibilidade'],['checkin','Check-in presencial'],['visits','Visitas'],['commissions','Comissões']],admin:[['overview','Visão geral'],['accounts','Validar contas'],['properties','Moderar imóveis'],['payments','Pagamentos GPO'],['settings','Configurações']]};if(current.role!=='admin')(items[current.role]||items.client).push(['community','Comunidade'+(window.communityBadge?window.communityBadge():'')]);return (items[current.role]||items.client).map(x=>({id:x[0],label:x[1]}))}
+function menuItems(){let items={client:[['overview','Visão geral'],['visits','As minhas visitas'],['contracts','Contratos'],['profile','O meu perfil']],owner:[['overview','Visão geral'],['properties','Os meus imóveis'],['create','Cadastrar imóvel'],['agents','Intermediários'],['visits','Visitas'],['leases','Arrendamentos'],['commissions','Comissões']],agent:[['overview','Visão geral'],['properties','Imóveis'],['create','Cadastrar imóvel'],['agents','Intermediários'],['availability','Disponibilidade'],['checkin','Check-in presencial'],['visits','Visitas'],['commissions','Comissões']],admin:[['overview','Visão geral'],['accounts','Validar contas'],['properties','Moderar imóveis'],['payments','Pagamentos GPO'],['settings','Configurações']]};if(window.Api?.enabled()&&current.role==='owner')items.owner.push(['bankDetails','Dados bancários']);if(window.Api?.enabled()&&current.role==='admin')items.admin.splice(items.admin.length-1,0,['ownerPayouts','Repasses a proprietários']);if(current.role!=='admin')(items[current.role]||items.client).push(['community','Comunidade'+(window.communityBadge?window.communityBadge():'')]);return (items[current.role]||items.client).map(x=>({id:x[0],label:x[1]}))}
 function statsCard(label,value){return '<div class="stat-card"><small>'+label+'</small><strong>'+value+'</strong></div>'}
 function renderPanel(){let c=$('#roleContent');if(!c)return;c.innerHTML=current.role==='owner'?ownerPanel():current.role==='agent'?agentPanel():current.role==='admin'?adminPanel():clientPanel();if(window.Api?.enabled()){const note=$('#roleMount .role-shell > .role-note');if(note)note.textContent='A sessão e os dados da conta são carregados pela API configurada.'}}
 function head(title,desc,badge=''){return '<div class="role-content-head"><div><h2>'+title+'</h2><p>'+desc+'</p></div>'+(badge?'<span class="status-pill '+badge.kind+'">'+badge.text+'</span>':'')+'</div>'}
@@ -129,7 +129,10 @@ refreshHeader();
 window.__roles={renderPanel,toastMsg};
 if(window.Api?.enabled()){
  let adminUsers=null,adminUsersError='',adminProperties=null,adminPropertiesError='',adminStats=null,adminStatsError='',adminPayments=null,adminPaymentsError='',adminSettings=null,adminSettingsError='';
+ let ownerBankDetails=null,ownerBankDetailsLoaded=false,ownerBankDetailsError='';
+ let adminOwnerPayouts=null,adminOwnerPayoutsError='',adminOwnerPayoutMeta={current_page:1,last_page:1,per_page:20,total:0,from:null,to:null};
  const localAdminPanel=adminPanel;
+ const localOwnerPanel=ownerPanel;
  let agentApiData=null,agentApiError='',agentSyncPromise=null;
  const localAgentPanel=agentPanel;
  function agentRefreshControl(){return '<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-agent-data">Atualizar dados</button></div>'}
@@ -228,12 +231,25 @@ if(window.Api?.enabled()){
   })();
   return agentSyncPromise;
  }
+ function ownerBankDetailsPanel(){
+  const content=ownerBankDetailsError
+   ?'<div class="role-notice">Não foi possível carregar os dados bancários: '+esc(ownerBankDetailsError)+'</div>'
+   :!ownerBankDetailsLoaded
+    ?'<div class="role-empty">A carregar os dados bancários da API...</div>'
+    :'<form id="bankDetailsForm" class="role-form"><div class="role-field full"><label for="bankIban">IBAN</label><input id="bankIban" name="iban" type="text" required maxlength="34" autocomplete="off" value="'+esc(ownerBankDetails?.iban||'')+'" placeholder="AO06000000000000000000000"></div><div class="role-field full"><label for="bankExpressNumber">Número Express</label><input id="bankExpressNumber" name="express_number" type="text" required autocomplete="tel" value="'+esc(ownerBankDetails?.express_number||'')+'" placeholder="+244923000000"></div><p class="role-help full">O IBAN será normalizado pela API. O número Express é guardado como texto.</p><div class="role-form-actions"><button type="submit" class="primary-button">Guardar dados bancários</button></div></form>';
+  return head('Dados bancários','Guarde ou atualize o destino para futuros repasses.')+'<div class="role-panel">'+content+'</div>'
+   +'<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-bank-details">Atualizar dados</button></div>';
+ }
+ ownerPanel=function(){
+  if(activePanel==='bankDetails')return ownerBankDetailsPanel();
+  return localOwnerPanel();
+ };
  adminPanel=function(){
   if(activePanel==='overview'){
    const stats=adminStats||{};
    return head('Painel administrativo','Validação, moderação e auditoria do MVP.')
     +(adminStatsError?'<div class="role-notice">Não foi possível carregar os indicadores: '+esc(adminStatsError)+'</div>':'')
-    +'<div class="role-stats">'+statsCard('Contas por validar',adminStats?Number(stats.users_pending||0):'—')+statsCard('Imóveis em revisão',adminStats?Number(stats.properties_pending||0):'—')+statsCard('Visitas pagas',adminStats?Number(stats.visits_paid||0):'—')+'</div><div class="role-hero"><div><strong>Fila de moderação</strong><span>Valide identidades e qualidade dos anúncios.</span></div><span class="role-hero-mark">✓</span></div><div class="role-row-actions" style="justify-content:flex-start"><button class="primary-button" data-panel="accounts">Validar contas</button><button class="secondary-button" data-panel="properties">Rever imóveis</button><button class="secondary-button" data-panel="payments">Auditar pagamentos</button></div>';
+    +'<div class="role-stats">'+statsCard('Contas por validar',adminStats?Number(stats.users_pending||0):'—')+statsCard('Imóveis em revisão',adminStats?Number(stats.properties_pending||0):'—')+statsCard('Visitas pagas',adminStats?Number(stats.visits_paid||0):'—')+'</div><div class="role-hero"><div><strong>Fila de moderação</strong><span>Valide identidades e qualidade dos anúncios.</span></div><span class="role-hero-mark">✓</span></div><div class="role-row-actions" style="justify-content:flex-start"><button class="primary-button" data-panel="accounts">Validar contas</button><button class="secondary-button" data-panel="properties">Rever imóveis</button><button class="secondary-button" data-panel="payments">Auditar pagamentos</button><button class="secondary-button" data-panel="ownerPayouts">Repasses a proprietários</button></div>';
   }
   if(activePanel==='accounts'){
    const content=adminUsersError
@@ -265,6 +281,16 @@ if(window.Api?.enabled()){
     +'<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-admin-payments">Atualizar lista</button></div>'
     +content;
   }
+  if(activePanel==='ownerPayouts'){
+   const content=adminOwnerPayoutsError
+    ?'<div class="role-notice">Não foi possível carregar os valores e destinos: '+esc(adminOwnerPayoutsError)+'</div>'
+    :adminOwnerPayouts===null
+     ?'<div class="role-empty">A carregar valores e destinos da API...</div>'
+     :adminOwnerPayoutList(adminOwnerPayouts);
+   return head('Valores e destinos dos proprietários','Soma mensal de rendas ativas; não representa saldo histórico de repasses.')
+    +'<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="refresh-owner-payouts">Atualizar lista</button></div>'
+    +content;
+  }
   if(activePanel==='settings'){
    const content=adminSettingsError
     ?'<div class="role-notice">Não foi possível carregar as configurações: '+esc(adminSettingsError)+'</div>'
@@ -277,6 +303,52 @@ if(window.Api?.enabled()){
   }
   return localAdminPanel();
  };
+ function adminOwnerPayoutList(rows){
+  if(!rows.length)return '<div class="role-empty"><b>Sem valores a apresentar</b>Não foram encontrados valores mensais de arrendamento ativo nesta página.</div>';
+  const meta=adminOwnerPayoutMeta,from=meta.from??((Number(meta.current_page)-1)*Number(meta.per_page)+1),to=meta.to??(from+rows.length-1);
+  const body=rows.map(item=>{
+   const owner=item.owner||{},destination=item.destination||{};
+   const destinationText=[destination.iban,destination.express_number].filter(Boolean).map(esc);
+   return '<tr><td><strong>'+esc(owner.name||'Proprietário')+'</strong><br><small>'+esc(owner.email||'')+'</small></td><td>'+money(item.monthly_amount_due)+' '+esc(item.currency||'AOA')+'</td><td>'+Number(item.active_rentals_count||0)+'</td><td>'+(destinationText.length?destinationText.join('<br>'):'Não informado')+'</td></tr>';
+  }).join('');
+  const pageControls=Number(meta.last_page)>1
+   ?'<div class="role-row-actions" style="justify-content:flex-end"><button class="secondary-button" data-action="owner-payout-page" data-page="'+(Number(meta.current_page)-1)+'"'+(Number(meta.current_page)<=1?' disabled':'')+'>Anterior</button><span class="role-help">Página '+Number(meta.current_page)+' de '+Number(meta.last_page)+'</span><button class="secondary-button" data-action="owner-payout-page" data-page="'+(Number(meta.current_page)+1)+'"'+(Number(meta.current_page)>=Number(meta.last_page)?' disabled':'')+'>Seguinte</button></div>'
+   :'';
+  return '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Proprietário</th><th>Valor mensal</th><th>Arrendamentos ativos</th><th>Destino</th></tr></thead><tbody>'+body+'</tbody></table></div><p class="role-help">A mostrar '+esc(from)+'–'+esc(to)+' de '+esc(meta.total)+' proprietário(s). Valores são rendas mensais estimadas, não pagamentos históricos.</p>'+pageControls;
+ }
+ async function syncOwnerBankDetails(showErrors){
+  if(current?.role!=='owner'||!Api.getToken())return;
+  try{
+   ownerBankDetails=Api.resource(await Api.bankDetails.get())||{};
+   ownerBankDetailsLoaded=true;ownerBankDetailsError='';
+   if(activePanel==='bankDetails')renderPanel();
+  }catch(error){
+   ownerBankDetailsError=error.message||'Erro desconhecido';
+   if(activePanel==='bankDetails')renderPanel();
+   if(showErrors)toastMsg('Não foi possível carregar os dados bancários: '+ownerBankDetailsError);
+  }
+ }
+ async function syncAdminOwnerPayouts(showErrors,page){
+  try{
+   const requestedPage=Number(page||adminOwnerPayoutMeta.current_page||1);
+   const response=await Api.admin.ownerPayouts({page:requestedPage,per_page:20});
+   const meta=response?.meta||response?.data?.meta||response?.data?.data?.meta||response;
+   adminOwnerPayouts=Api.rows(response);
+   adminOwnerPayoutMeta={
+    current_page:Number(meta?.current_page||requestedPage),
+    last_page:Number(meta?.last_page||requestedPage),
+    per_page:Number(meta?.per_page||20),
+    total:Number(meta?.total??adminOwnerPayouts.length),
+    from:meta?.from??null,to:meta?.to??null
+   };
+   adminOwnerPayoutsError='';
+   if(activePanel==='ownerPayouts')renderPanel();
+  }catch(error){
+   adminOwnerPayoutsError=error.message||'Erro desconhecido';
+   if(activePanel==='ownerPayouts')renderPanel();
+   if(showErrors)toastMsg('Não foi possível carregar os valores e destinos: '+adminOwnerPayoutsError);
+  }
+ }
  async function syncAdminStats(showErrors){
   try{
    adminStats=Api.resource(await Api.admin.stats());
@@ -394,29 +466,46 @@ if(window.Api?.enabled()){
   setTimeout(()=>syncAdminStats(true),0);
  },true);
  document.addEventListener('click',event=>{
-  const panel=event.target.closest('#roleMount [data-panel="accounts"],#roleMount [data-panel="properties"],#roleMount [data-panel="payments"],#roleMount [data-panel="settings"]');
+  const panel=event.target.closest('#roleMount [data-panel="accounts"],#roleMount [data-panel="properties"],#roleMount [data-panel="payments"],#roleMount [data-panel="ownerPayouts"],#roleMount [data-panel="settings"]');
   if(!panel||current?.role!=='admin')return;
   setTimeout(()=>{
    if(panel.dataset.panel==='accounts')syncAdminUsers(true);
    else if(panel.dataset.panel==='properties')syncAdminProperties(true);
    else if(panel.dataset.panel==='payments')syncAdminPayments(true);
+   else if(panel.dataset.panel==='ownerPayouts')syncAdminOwnerPayouts(true,1);
    else syncAdminSettings(true);
   },0);
+ },true);
+ document.addEventListener('click',event=>{
+  const panel=event.target.closest('#roleMount [data-panel="bankDetails"]');
+  if(!panel||current?.role!=='owner')return;
+  setTimeout(()=>syncOwnerBankDetails(true),0);
+ },true);
+ document.addEventListener('click',async event=>{
+  const refresh=event.target.closest('#roleMount [data-action="refresh-bank-details"]');
+  if(!refresh||current?.role!=='owner')return;
+  event.preventDefault();event.stopImmediatePropagation();refresh.disabled=true;
+  await syncOwnerBankDetails(true);
+  if(refresh.isConnected)refresh.disabled=false;
  },true);
  document.addEventListener('click',async event=>{
   const refresh=event.target.closest('#roleMount [data-action="refresh-admin-users"]');
   const refreshProperties=event.target.closest('#roleMount [data-action="refresh-admin-properties"]');
   const refreshPayments=event.target.closest('#roleMount [data-action="refresh-admin-payments"]');
+  const refreshOwnerPayouts=event.target.closest('#roleMount [data-action="refresh-owner-payouts"]');
+  const ownerPayoutPage=event.target.closest('#roleMount [data-action="owner-payout-page"]');
   const refreshSettings=event.target.closest('#roleMount [data-action="refresh-admin-settings"]');
   const userReview=event.target.closest('#roleMount [data-action="approve-user"],#roleMount [data-action="reject-user"]');
   const propertyReview=event.target.closest('#roleMount [data-action="approve-property"],#roleMount [data-action="reject-property"]');
-  if(!refresh&&!refreshProperties&&!refreshPayments&&!refreshSettings&&!userReview&&!propertyReview)return;
+  if(!refresh&&!refreshProperties&&!refreshPayments&&!refreshOwnerPayouts&&!ownerPayoutPage&&!refreshSettings&&!userReview&&!propertyReview)return;
   event.preventDefault();
   event.stopImmediatePropagation();
   if(!Api.getToken()){toastMsg('Inicie sessão como administrador para gerir contas.');return}
   if(refresh){refresh.disabled=true;await syncAdminUsers(true);return}
   if(refreshProperties){refreshProperties.disabled=true;await syncAdminProperties(true);return}
   if(refreshPayments){refreshPayments.disabled=true;await syncAdminPayments(true);return}
+  if(refreshOwnerPayouts){refreshOwnerPayouts.disabled=true;await syncAdminOwnerPayouts(true,adminOwnerPayoutMeta.current_page);return}
+  if(ownerPayoutPage){ownerPayoutPage.disabled=true;await syncAdminOwnerPayouts(true,ownerPayoutPage.dataset.page);return}
   if(refreshSettings){refreshSettings.disabled=true;await syncAdminSettings(true);return}
   const review=userReview||propertyReview;
   review.disabled=true;
@@ -476,10 +565,15 @@ if(window.Api?.enabled()){
   finally{button.disabled=register&&window.Api?.enabled()?!isPhoneVerificationComplete(form):false}
  },true);
  document.addEventListener('submit',async e=>{
-  const form=e.target;if(!['propertyForm','agentInviteForm','availabilityForm','checkinForm','feeForm'].includes(form.id))return;
+  const form=e.target;if(!['propertyForm','agentInviteForm','availabilityForm','checkinForm','feeForm','bankDetailsForm'].includes(form.id))return;
   e.preventDefault();e.stopImmediatePropagation();
   const fd=new FormData(form),button=form.querySelector('button[type="submit"]');if(button)button.disabled=true;
   try{
+   if(form.id==='bankDetailsForm'){
+    if(current?.role!=='owner'||!Api.getToken())throw new Error('Inicie sessão como proprietário para guardar os dados bancários.');
+    ownerBankDetails=Api.resource(await Api.bankDetails.save({iban:String(fd.get('iban')||'').trim(),express_number:String(fd.get('express_number')||'').trim()}))||{};
+    ownerBankDetailsLoaded=true;ownerBankDetailsError='';renderPanel();toastMsg('Dados bancários guardados na API');return;
+   }
    if(form.id==='propertyForm'){
     if(window.__media.photos.length<5)throw new Error('Adicione pelo menos 5 fotografias do imóvel.');
     const body=new FormData(),keys=['title','category','type','price','province','municipality','neighborhood','bedrooms','baths','area','description'];
